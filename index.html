@@ -407,6 +407,16 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#3949AB;
 .pay-item-label{font-size:14px;color:var(--text);font-weight:700;}
 .pay-item-sub{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;word-break:keep-all;line-height:1.4;}
 .pay-item-val{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:17px;color:#3949AB;white-space:nowrap;flex-shrink:0;margin-left:8px;}
+.pay-pfx-m{display:none;}
+/* 모바일: 아)/차)/타) 접두와 '수당' 접미를 숨기고 여백·글자를 줄여 한 눈에 들어오게 */
+body.mode-mobile .pay-summary{gap:4px;}
+body.mode-mobile .pay-item{padding:7px 11px;border-radius:7px;}
+body.mode-mobile .pay-item-label{font-size:13px;}
+body.mode-mobile .pay-item-sub{font-size:10px;line-height:1.35;}
+body.mode-mobile .pay-item-val{font-size:15px;margin-left:6px;}
+body.mode-mobile .pay-pfx,
+body.mode-mobile .pay-sfx{display:none;}
+body.mode-mobile .pay-pfx-m{display:inline;}
 .total-box{background:linear-gradient(135deg,#1B5E20,#2E7D32 55%,#388E3C);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;box-shadow:0 3px 12px rgba(27,94,32,0.3);}
 .total-box .tl{font-size:15px;font-weight:700;color:rgba(255,255,255,0.85);}
 .total-box .tv{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:900;color:#fff;}
@@ -4249,7 +4259,7 @@ function calculate(){
   const extraTitle = diff > 0 ? '➕ 추가 근무분 수당' : diff < 0 ? '➖ 기본 대비 감소' : '기본과 동일';
   // 각 수당 항목 아래에 "기본 N + 추가 M" 한 줄
   const splitLine = (actual, base) => (hasEdits && actual !== base)
-    ? `<div class="pay-item-sub" style="color:${actual>base?'#1565C0':'#C62828'};font-weight:700;">기본 ${base.toLocaleString()} ${actual>base?'+ 추가':'− 감소'} ${Math.abs(actual-base).toLocaleString()}</div>`
+    ? `<div class="pay-item-sub" style="color:${actual>base?'#1565C0':'#C62828'};font-weight:700;">기본 ${base.toLocaleString()} <span class="pay-sfx">${actual>base?'+ 추가 ':'− 감소 '}</span><span class="pay-pfx-m">${actual>base?'+':'−'}</span>${Math.abs(actual-base).toLocaleString()}</div>`
     : '';
 
   const compareHtml = hasEdits ? `
@@ -4279,15 +4289,15 @@ function calculate(){
   document.getElementById('paySummary').innerHTML=`
     ${compareHtml}
     <div class="pay-item">
-      <div class="pay-item-l"><div class="pay-item-label">아) 시간외 수당</div><div class="pay-item-sub">${사.toFixed(2)}h × ${rate.overtime.toLocaleString()}원/h</div>${splitLine(아,B.아)}</div>
+      <div class="pay-item-l"><div class="pay-item-label"><span class="pay-pfx">아) </span>시간외<span class="pay-sfx"> 수당</span></div><div class="pay-item-sub">${사.toFixed(2)}h × ${rate.overtime.toLocaleString()}원/h</div>${splitLine(아,B.아)}</div>
       <div class="pay-item-val">${아.toLocaleString()}원</div>
     </div>
     <div class="pay-item">
-      <div class="pay-item-l"><div class="pay-item-label">차) 야간 수당</div><div class="pay-item-sub">${자.toFixed(2)}h × ${rate.night.toLocaleString()}원/h</div>${splitLine(차,B.차)}</div>
+      <div class="pay-item-l"><div class="pay-item-label"><span class="pay-pfx">차) </span>야간<span class="pay-sfx"> 수당</span></div><div class="pay-item-sub">${자.toFixed(2)}h × ${rate.night.toLocaleString()}원/h</div>${splitLine(차,B.차)}</div>
       <div class="pay-item-val">${차.toLocaleString()}원</div>
     </div>
     <div class="pay-item">
-      <div class="pay-item-l"><div class="pay-item-label">타) 휴일 수당</div><div class="pay-item-sub">${카}일 × ${rate.holiday.toLocaleString()}원/일</div>${splitLine(타,B.타)}</div>
+      <div class="pay-item-l"><div class="pay-item-label"><span class="pay-pfx">타) </span>휴일<span class="pay-sfx"> 수당</span></div><div class="pay-item-sub">${카}일 × ${rate.holiday.toLocaleString()}원/일</div>${splitLine(타,B.타)}</div>
       <div class="pay-item-val">${타.toLocaleString()}원</div>
     </div>
   `;
