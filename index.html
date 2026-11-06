@@ -4377,7 +4377,11 @@ function saveMonthResult(){
   if(!lc){alert('먼저 수당 계산을 실행하세요.');return;}
   const data=loadStatData();
   const key=`${lc.y}-${String(lc.m).padStart(2,'0')}`;
-  data[key]={year:lc.y,month:lc.m,grade:lc.grade,아:lc.아,차:lc.차,타:lc.타,total:lc.total,사:lc.사,자:lc.자,카:lc.카,baseTotal:lc.baseTotal||lc.total,ygunCnt:lc.ygunCnt||0,dangCnt:lc.dangCnt||0,holKa:lc.holKa||0,savedAt:new Date().toISOString()};
+  data[key]={year:lc.y,month:lc.m,grade:lc.grade,아:lc.아,차:lc.차,타:lc.타,total:lc.total,사:lc.사,자:lc.자,카:lc.카,
+    baseTotal:lc.baseTotal||lc.total,
+    // 항목별 기본근무분 — 연간/월별 통계에서 '추가 근무분'을 분리해 보여주기 위함
+    base아:lc.base아!=null?lc.base아:lc.아, base차:lc.base차!=null?lc.base차:lc.차, base타:lc.base타!=null?lc.base타:lc.타,
+    ygunCnt:lc.ygunCnt||0,dangCnt:lc.dangCnt||0,holKa:lc.holKa||0,savedAt:new Date().toISOString()};
   saveStatData(data);
   // 자동 동기화: 통계도 서버에 비동기 업로드
   _sbAutoSyncStats();
@@ -4632,20 +4636,22 @@ function renderMonthly(){
   // 야간 일수 필드가 저장돼 있는지 확인 (구버전 데이터 감지)
   const hasLegacyData = months.some(r=>r.d && r.d.ygunCnt==null && r.d.dangCnt==null);
   const exp=_statExpanded;
-  let totAa=0,totCha=0,totTa=0,totTotal=0;
+  let totAa=0,totCha=0,totTa=0,totTotal=0,totBase=0;
   let totYgunCnt=0,totHolKa=0,totDangCnt=0;
+  const exFmt=v=>`<span style="color:${v>0?'#1B5E20':v<0?'#C62828':'var(--text3)'};font-weight:700;">${v>0?'+':v<0?'−':''}${(Math.abs(v)/10000).toFixed(1)}</span>`;
 
   let rows='';
   months.forEach(({m,d})=>{
     if(!d){
       rows+=`<tr class="stat-empty-row">
         <td><span class="stat-m">${m}월</span></td>
-        <td>-</td><td>-</td><td>-</td>
+        <td>-</td><td>-</td><td>-</td><td>-</td>
         <td style="text-align:right;color:var(--text3);">-</td>
       </tr>`;
       return;
     }
     totAa+=d.아; totCha+=d.차; totTa+=d.타; totTotal+=d.total;
+    totBase+=(d.baseTotal!=null?d.baseTotal:d.total);
     totYgunCnt+=(d.ygunCnt||0); totHolKa+=(d.holKa||0); totDangCnt+=(d.dangCnt||0);
     const fmt=v=>(v/10000).toFixed(1);
     rows+=`<tr>
@@ -4653,6 +4659,7 @@ function renderMonthly(){
       <td>${fmt(d.아)}</td>
       <td>${fmt(d.차)}</td>
       <td>${fmt(d.타)}</td>
+      <td>${exFmt(d.total-(d.baseTotal!=null?d.baseTotal:d.total))}</td>
       <td class="stat-hi">${fmt(d.total)}</td>
     </tr>`;
   });
@@ -4668,6 +4675,7 @@ function renderMonthly(){
         <th>시간외</th>
         <th>야간</th>
         <th>휴일</th>
+        <th>추가</th>
         <th>합계 <span class="th-unit">(단위: 만원)</span></th>
       </tr></thead>
       <tbody>
@@ -4677,6 +4685,7 @@ function renderMonthly(){
           <td>${(totAa/10000).toFixed(1)}</td>
           <td>${(totCha/10000).toFixed(1)}</td>
           <td>${(totTa/10000).toFixed(1)}</td>
+          <td>${exFmt(totTotal-totBase)}</td>
           <td class="stat-hi">${(totTotal/10000).toFixed(1)}</td>
         </tr>
       </tbody>
@@ -4745,9 +4754,14 @@ function renderYearly(){
   // 연도별 집계
   const byYear={};
   Object.values(data).forEach(d=>{
-    if(!byYear[d.year])byYear[d.year]={year:d.year,아:0,차:0,타:0,total:0,cnt:0};
-    byYear[d.year].아+=d.아;byYear[d.year].차+=d.차;byYear[d.year].타+=d.타;
-    byYear[d.year].total+=d.total;byYear[d.year].cnt++;
+    if(!byYear[d.year])byYear[d.year]={year:d.year,아:0,차:0,타:0,total:0,cnt:0,baseTotal:0,base아:0,base차:0,base타:0};
+    const Y=byYear[d.year];
+    Y.아+=d.아; Y.차+=d.차; Y.타+=d.타; Y.total+=d.total; Y.cnt++;
+    // 구버전 저장 데이터는 기본값이 없으므로 실제값으로 대체 → 추가분 0으로 집계
+    Y.baseTotal += (d.baseTotal!=null?d.baseTotal:d.total);
+    Y.base아    += (d.base아   !=null?d.base아   :d.아);
+    Y.base차    += (d.base차   !=null?d.base차   :d.차);
+    Y.base타    += (d.base타   !=null?d.base타   :d.타);
   });
   const years=Object.values(byYear).sort((a,b)=>b.year-a.year);
   const selY=+document.getElementById('statYear').value;
@@ -4762,25 +4776,54 @@ function renderYearly(){
       <div class="year-card"><div class="year-card-lbl">휴일 합계</div><div class="year-card-val">${(selData.타/10000).toFixed(1)}<span style="font-size:10px;">만원</span></div><div class="year-card-sub">${selData.타.toLocaleString()}원</div></div>
       <div class="year-card highlight" style="grid-column:span 2;"><div class="year-card-lbl">${selY}년 총 합계</div><div class="year-card-val">${(selData.total/10000).toFixed(0)}<span style="font-size:11px;">만원</span></div><div class="year-card-sub">${selData.total.toLocaleString()}원 (${selData.cnt}개월 저장)</div></div>
       <div class="year-card"><div class="year-card-lbl">월 평균</div><div class="year-card-val">${(avg/10000).toFixed(1)}<span style="font-size:10px;">만원</span></div><div class="year-card-sub">${avg.toLocaleString()}원</div></div>
-    </div>`;
+    </div>
+    ${_buildYearExtraBox(selData)}`;
   }
 
-  let tableRows=years.map(yr=>`<tr>
+  let tableRows=years.map(yr=>{
+    const ex=yr.total-yr.baseTotal;
+    return `<tr>
     <td><span class="stat-m">${yr.year}년</span><br><span class="stat-g">${yr.cnt}개월</span></td>
     <td>${(yr.아/10000).toFixed(1)}</td>
     <td>${(yr.차/10000).toFixed(1)}</td>
     <td>${(yr.타/10000).toFixed(1)}</td>
-    <td class="stat-hi">${(yr.total/10000).toFixed(1)}<span class="stat-unit">만</span></td>
-  </tr>`).join('');
+    <td style="color:${ex>0?'#1B5E20':ex<0?'#C62828':'var(--text3)'};font-weight:700;">${ex>0?'+':ex<0?'−':''}${(Math.abs(ex)/10000).toFixed(1)}</td>
+    <td class="stat-hi">${(yr.total/10000).toFixed(1)}</td>
+  </tr>`;}).join('');
 
   el.innerHTML=`
     ${cards}
     ${_buildYearlyTrendBars(years, selY)}
     <table class="stat-table stat-detail" style="margin-top:10px;">
-      <thead><tr><th>연도</th><th>시간외</th><th>야간</th><th>휴일</th><th>합계 <span class="th-unit">(단위: 만원)</span></th></tr></thead>
+      <thead><tr><th>연도</th><th>시간외</th><th>야간</th><th>휴일</th><th>추가</th><th>합계 <span class="th-unit">(단위: 만원)</span></th></tr></thead>
       <tbody>${tableRows}</tbody>
     </table>
   `;
+}
+
+// 연간 '기본근무분 / 추가근무분' 분해 박스
+function _buildYearExtraBox(Y){
+  if(!Y) return '';
+  const ex = Y.total - Y.baseTotal;
+  const d아 = Y.아 - Y.base아, d차 = Y.차 - Y.base차, d타 = Y.타 - Y.base타;
+  const c  = ex > 0 ? '#1B5E20' : ex < 0 ? '#C62828' : 'var(--text2)';
+  const bg = ex > 0 ? 'var(--green-bg)' : ex < 0 ? 'var(--red-bg)' : 'var(--bg3)';
+  const bd = ex > 0 ? '#A5D6A7' : ex < 0 ? '#FFCDD2' : 'var(--border)';
+  const pct = Y.baseTotal > 0 ? (ex / Y.baseTotal * 100) : 0;
+  const f = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toLocaleString();
+  return `
+  <div style="background:${bg};border:1px solid ${bd};border-radius:10px;padding:11px 13px;margin-top:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <span style="font-size:11px;font-weight:800;color:${c};">${ex>=0?'➕ 추가 근무분 수당':'➖ 기본 대비 감소'}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:900;color:${c};">${f(ex)}원</span>
+    </div>
+    <div style="font-size:9.5px;font-weight:700;color:${c};opacity:.85;margin-top:5px;font-family:'JetBrains Mono',monospace;">
+      시간외 ${f(d아)} · 야간 ${f(d차)} · 휴일 ${f(d타)}
+    </div>
+    <div style="font-size:9.5px;color:var(--text3);margin-top:6px;padding-top:6px;border-top:1px dashed ${bd};font-family:'JetBrains Mono',monospace;">
+      기본근무분 ${Y.baseTotal.toLocaleString()}원 · 기본 대비 ${pct>=0?'+':'−'}${Math.abs(pct).toFixed(1)}%
+    </div>
+  </div>`;
 }
 
 // ══ 뷰 모드 — 자동 감지 ══
