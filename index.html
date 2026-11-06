@@ -652,7 +652,7 @@ body.theme-dark .team-cmp-badge{background:#1A2540;border-color:#3949AB;color:#9
 /* ── 설정 모달 ── */
 /* 중앙 플로팅 (백업 모달과 동일 스타일) — 기존 바텀시트에서 변경 */
 #settingsModal{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;
-  padding:max(14px,env(safe-area-inset-top,14px)) 14px max(14px,env(safe-area-inset-bottom,14px));}
+  padding:max(12px,env(safe-area-inset-top,12px)) 12px max(12px,env(safe-area-inset-bottom,12px));}
 #settingsModal.open{display:flex;}
 .settings-box{background:#fff;border-radius:16px;width:100%;max-width:540px;box-shadow:0 8px 40px rgba(0,0,0,0.28);border-top:4px solid #3949AB;overflow:hidden;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .settings-header{padding:18px 18px 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1;padding-bottom:12px;border-bottom:1px solid var(--border);}
@@ -989,13 +989,13 @@ body.theme-dark .rc-sub{color:var(--text3);}
     <div class="settings-sec">
       <div class="settings-sec-title">팀/계급 선택</div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <div class="settings-row" style="gap:8px;flex:1;margin-bottom:0;">
+        <div class="settings-row" style="gap:8px;flex:1;min-width:0;margin-bottom:0;">
           <div class="settings-row-label" style="flex:none;">팀</div>
-          <select id="settingsTeam" style="flex:1;">
+          <select id="settingsTeam" style="flex:1;min-width:0;">
             <option value="1">1팀</option><option value="2">2팀</option><option value="3">3팀</option>
           </select>
           <div class="settings-row-label" style="flex:none;">계급</div>
-          <select id="settingsGrade" style="flex:1;">
+          <select id="settingsGrade" style="flex:1;min-width:0;">
             <option value="소방령">소방령</option><option value="소방경">소방경</option>
             <option value="소방위">소방위</option><option value="소방장">소방장</option>
             <option value="소방교">소방교</option><option value="소방사">소방사</option>
@@ -1631,15 +1631,19 @@ async function _sbMigrateUserId(oldId, newId) {
 // 하위 호환: 백업 파일의 cloud_uid 무시 (이름+비번 해시로 대체)
 function _restoreCloudUserId(name, uid) { /* no-op */ }
 
-function sbInit() {
+async function sbInit() {
   const url = localStorage.getItem(SB_URL_KEY);
   const key = localStorage.getItem(SB_KEY_KEY);
   _sbAutoOn = localStorage.getItem(SB_AUTO_KEY) === 'true';
-  if (url && key && typeof supabase !== 'undefined') {
-    try {
-      _sbGetOrCreate(url, key); // 싱글톤 생성
-      _sbReady = true;
-    } catch(e) { _sbReady = false; }
+  if (url && key) {
+    // 기본 CDN이 차단됐으면 대체 CDN으로 한 번 더 시도 (아래 _ensureSbLib)
+    if (typeof supabase === 'undefined') await _ensureSbLib();
+    if (typeof supabase !== 'undefined') {
+      try {
+        _sbGetOrCreate(url, key); // 싱글톤 생성
+        _sbReady = true;
+      } catch(e) { _sbReady = false; }
+    }
   }
   // ── keepalive: pause 방지 ping ──
   // url/key만 있으면 _sbReady와 무관하게 동작 (라이브러리 로드 실패 시에도 유지)
@@ -1750,11 +1754,48 @@ function sbOpenSettings() {
   switchBackupTab('cloud');
 }
 
+// ── Supabase 라이브러리 로더 (CDN 폴백) ──────────────────────────
+// 광고차단기(Brave Shields 등)나 사내망이 cdn.jsdelivr.net을 막으면
+// <head>의 기본 스크립트가 조용히 실패해 "연결 안 됨"만 뜹니다.
+// 그런 경우 대체 CDN으로 다시 시도합니다.
+const SB_CDN_FALLBACKS = [
+  'https://unpkg.com/@supabase/supabase-js@2',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+];
+let _sbLibPromise = null;
+function _ensureSbLib(){
+  if (typeof supabase !== 'undefined') return Promise.resolve(true);
+  if (_sbLibPromise) return _sbLibPromise;
+  _sbLibPromise = (async () => {
+    for (const src of SB_CDN_FALLBACKS) {
+      try {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = src; s.async = true;
+          const t = setTimeout(() => reject(new Error('timeout')), 8000);
+          s.onload  = () => { clearTimeout(t); resolve(); };
+          s.onerror = () => { clearTimeout(t); reject(new Error('blocked')); };
+          document.head.appendChild(s);
+        });
+        if (typeof supabase !== 'undefined') { console.log('[SB] 라이브러리 로드 성공:', src); return true; }
+      } catch(e) { console.warn('[SB] CDN 실패(' + e.message + '):', src); }
+    }
+    return false;
+  })();
+  return _sbLibPromise;
+}
+
 async function sbConnect() {
   const url = (document.getElementById('sbUrl').value || '').trim();
   const key = (document.getElementById('sbKey').value || '').trim();
   if (!url || !key) { _sbShowMsg('❌ URL과 Anon Key를 모두 입력하세요.', '#C62828'); return; }
-  if (typeof supabase === 'undefined') { _sbShowMsg('❌ Supabase 라이브러리 로드 실패 (네트워크 확인)', '#C62828'); return; }
+  if (typeof supabase === 'undefined') {
+    _sbShowMsg('🔄 라이브러리 불러오는 중…', '#888');
+    if (!(await _ensureSbLib())) {
+      _sbShowMsg('❌ Supabase 라이브러리를 불러오지 못했습니다. 광고차단(Brave Shields 등)을 이 사이트에서 끄고 새로고침해 주세요.', '#C62828');
+      return;
+    }
+  }
   _sbShowMsg('🔄 연결 테스트 중…', '#888');
   try {
     // 싱글톤: url/key 동일하면 기존 클라이언트 재사용, 변경 시에만 새로 생성
