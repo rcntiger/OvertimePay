@@ -1147,7 +1147,11 @@ body.theme-dark .rc-sub{color:var(--text3);}
     </div>
     <!-- 💓 keepalive 상태 (무료 플랜 일시중지 방지) -->
     <div id="sbPingInfo" style="display:none;font-size:11px;font-weight:600;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 11px;margin-bottom:8px;line-height:1.7;"></div>
-    <button id="sbPingBtn" onclick="sbPingNow()" style="width:100%;margin-bottom:10px;background:var(--bg3);color:var(--text2);border:1.5px solid var(--border2);border-radius:8px;padding:8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;">💓 지금 깨우기</button>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button id="sbDiagBtn" onclick="sbDiagnose()" style="flex:1;min-width:0;background:var(--bg3);color:var(--text2);border:1.5px solid var(--border2);border-radius:8px;padding:8px 4px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;">🔍 연결 진단</button>
+      <button id="sbPingBtn" onclick="sbPingNow()" style="flex:1;min-width:0;background:var(--bg3);color:var(--text2);border:1.5px solid var(--border2);border-radius:8px;padding:8px 4px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;">💓 지금 깨우기</button>
+    </div>
+    <pre id="sbDiagBox" style="display:none;white-space:pre-wrap;word-break:break-all;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;padding:10px;margin-bottom:10px;font-family:'JetBrains Mono',monospace;font-size:10.5px;line-height:1.75;color:var(--text2);"></pre>
     <div style="margin-bottom:8px;">
       <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px;">Supabase Project URL</div>
       <input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co" autocomplete="off"
@@ -1707,6 +1711,81 @@ async function _sbPing(force) {
     _sbRenderPingInfo();
     return false;
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  🔍 연결 진단 — "연결 안 됨"의 원인을 기기에서 바로 확인
+//  콘솔을 볼 수 없는 모바일에서 어느 단계가 막혔는지 알려주고,
+//  모든 단계가 통과하면 연결 상태를 그 자리에서 복구합니다.
+// ══════════════════════════════════════════════════════════════════
+async function sbDiagnose(){
+  const box = document.getElementById('sbDiagBox');
+  const btn = document.getElementById('sbDiagBtn');
+  if(!box) return;
+  box.style.display = 'block';
+  box.textContent   = '진단 중…';
+  if(btn){ btn.disabled = true; btn.textContent = '진단 중…'; }
+
+  const url = (localStorage.getItem(SB_URL_KEY) || '').trim();
+  const key = (localStorage.getItem(SB_KEY_KEY) || '').trim();
+  const L = [];
+
+  // 1) 라이브러리
+  let lib = typeof supabase !== 'undefined';
+  if(!lib){
+    box.textContent = '1. 라이브러리 … 기본 CDN 실패, 대체 CDN 시도 중…';
+    lib = await _ensureSbLib();
+  }
+  L.push('1. 라이브러리  ' + (lib ? '✅ 로드됨' : '❌ 로드 실패'));
+
+  // 2~3) 저장된 설정
+  L.push('2. 저장된 URL  ' + (url ? '✅ ' + url.replace(/^https?:\/\//,'').slice(0,30) : '❌ 없음'));
+  L.push('3. 저장된 Key  ' + (key ? `✅ ${key.slice(0,6)}… (${key.length}자)` : '❌ 없음'));
+
+  // 4) 클라이언트 생성
+  let cli = null;
+  if(lib && url && key){
+    try { cli = _sbGetOrCreate(url, key); L.push('4. 클라이언트  ✅ 생성됨'); }
+    catch(e){ L.push('4. 클라이언트  ❌ ' + (e.message || e)); }
+  } else L.push('4. 클라이언트  ⏭ 건너뜀');
+
+  // 5) 서버 응답 — 라이브러리 없이도 확인 가능
+  let httpOk = false, httpStatus = 0;
+  if(url && key){
+    try {
+      const res = await fetch(`${url.replace(/\/+$/,'')}/rest/v1/otp_monthly?select=id&limit=1`, {
+        headers: { apikey: key, Authorization: 'Bearer ' + key }, cache: 'no-store'
+      });
+      httpStatus = res.status; httpOk = res.ok;
+      L.push(`5. 서버 응답   ${res.ok ? '✅' : '❌'} HTTP ${res.status}`);
+      if(!res.ok) L.push('   ' + (await res.text()).slice(0,140));
+    } catch(e){ L.push('5. 서버 응답   ❌ 네트워크 실패 (' + e.message + ')'); }
+  } else L.push('5. 서버 응답   ⏭ 건너뜀');
+
+  // 6) 결론 + 가능하면 복구
+  L.push('─────────────────');
+  if(!url || !key){
+    L.push('▶ 이 기기에 설정이 없습니다.');
+    L.push('  위 칸에 URL·Anon Key를 넣고 연결하세요.');
+  } else if(!lib){
+    L.push('▶ Supabase 라이브러리를 못 불러왔습니다.');
+    L.push('  광고차단·보안 프로그램이 CDN을 막았거나');
+    L.push('  네트워크가 외부 스크립트를 차단한 상태입니다.');
+    if(httpOk) L.push('  (서버 자체는 정상 응답 — 차단 문제가 맞습니다)');
+  } else if(!httpOk){
+    L.push(httpStatus === 401 || httpStatus === 403
+      ? '▶ Anon Key가 맞지 않습니다. 다시 복사해 넣으세요.'
+      : httpStatus === 404
+        ? '▶ 테이블이 없습니다. 클라우드 탭의 SQL을 실행하세요.'
+        : '▶ 서버에 닿지 못했습니다. 프로젝트가 일시중지되었는지 확인하세요.');
+  } else if(cli){
+    _sbReady = true;
+    _sbUpdateUI(true);
+    L.push('▶ ✅ 정상입니다 — 연결 상태를 복구했습니다.');
+  }
+
+  box.textContent = L.join('\n');
+  if(btn){ btn.disabled = false; btn.textContent = '🔍 연결 진단'; }
 }
 
 // 수동 ping 버튼
@@ -4164,6 +4243,15 @@ function calculate(){
   const diffBg    = diff > 0 ? '#E8F5E9' : diff < 0 ? '#FFEBEE' : '#F4F4F6';
   const diffBorder= diff > 0 ? '#A5D6A7' : diff < 0 ? '#FFCDD2' : '#E0E0E0';
 
+  // 기본근무분 / 추가근무분 분해 — 항목별로 얼마가 더 붙었는지 바로 보이게
+  const d아 = 아 - B.아, d차 = 차 - B.차, d타 = 타 - B.타;
+  const fmtD = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toLocaleString();
+  const extraTitle = diff > 0 ? '➕ 추가 근무분 수당' : diff < 0 ? '➖ 기본 대비 감소' : '기본과 동일';
+  // 각 수당 항목 아래에 "기본 N + 추가 M" 한 줄
+  const splitLine = (actual, base) => (hasEdits && actual !== base)
+    ? `<div class="pay-item-sub" style="color:${actual>base?'#1565C0':'#C62828'};font-weight:700;">기본 ${base.toLocaleString()} ${actual>base?'+ 추가':'− 감소'} ${Math.abs(actual-base).toLocaleString()}</div>`
+    : '';
+
   const compareHtml = hasEdits ? `
     <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;">
       <div style="flex:1;min-width:130px;background:#F0F1FF;border:1px solid #C5CAE9;border-radius:9px;padding:10px 13px;">
@@ -4176,9 +4264,14 @@ function calculate(){
         <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;color:#1B5E20;">${total.toLocaleString()}<span style="font-size:10px;font-weight:400;margin-left:2px;">원</span></div>
         <div style="font-size:9px;color:#388E3C;margin-top:3px;">${R.editedDays}일 수정 반영</div>
       </div>
-      <div style="width:100%;background:${diffBg};border:1px solid ${diffBorder};border-radius:9px;padding:9px 13px;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:11px;font-weight:700;color:${diffColor};">수당 증감</span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:900;color:${diffColor};">${diffSign}${diff.toLocaleString()}원</span>
+      <div style="width:100%;background:${diffBg};border:1px solid ${diffBorder};border-radius:9px;padding:10px 13px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:11px;font-weight:800;color:${diffColor};">${extraTitle}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:900;color:${diffColor};">${diffSign}${diff.toLocaleString()}원</span>
+        </div>
+        <div style="font-size:9.5px;font-weight:700;color:${diffColor};opacity:.85;margin-top:5px;font-family:'JetBrains Mono',monospace;">
+          시간외 ${fmtD(d아)} · 야간 ${fmtD(d차)} · 휴일 ${fmtD(d타)}
+        </div>
       </div>
     </div>
   ` : `<div style="background:#F0F0F2;border-radius:8px;padding:8px 12px;font-size:10px;color:#98989E;margin-bottom:10px;">📋 수정된 일정이 없어 기본 일정과 동일합니다.</div>`;
@@ -4186,15 +4279,15 @@ function calculate(){
   document.getElementById('paySummary').innerHTML=`
     ${compareHtml}
     <div class="pay-item">
-      <div class="pay-item-l"><div class="pay-item-label">아) 시간외 수당${hasEdits&&아!==B.아?` <span style="color:${아>B.아?'#1565C0':'#C62828'};font-size:12px;font-weight:800;">${아>B.아?'(+)':'(-)'}</span>`:''}</div><div class="pay-item-sub">${사.toFixed(2)}h × ${rate.overtime.toLocaleString()}원/h</div></div>
+      <div class="pay-item-l"><div class="pay-item-label">아) 시간외 수당</div><div class="pay-item-sub">${사.toFixed(2)}h × ${rate.overtime.toLocaleString()}원/h</div>${splitLine(아,B.아)}</div>
       <div class="pay-item-val">${아.toLocaleString()}원</div>
     </div>
     <div class="pay-item">
-      <div class="pay-item-l"><div class="pay-item-label">차) 야간 수당${hasEdits&&차!==B.차?` <span style="color:${차>B.차?'#1565C0':'#C62828'};font-size:12px;font-weight:800;">${차>B.차?'(+)':'(-)'}</span>`:''}</div><div class="pay-item-sub">${자.toFixed(2)}h × ${rate.night.toLocaleString()}원/h</div></div>
+      <div class="pay-item-l"><div class="pay-item-label">차) 야간 수당</div><div class="pay-item-sub">${자.toFixed(2)}h × ${rate.night.toLocaleString()}원/h</div>${splitLine(차,B.차)}</div>
       <div class="pay-item-val">${차.toLocaleString()}원</div>
     </div>
     <div class="pay-item">
-      <div class="pay-item-l"><div class="pay-item-label">타) 휴일 수당${hasEdits&&타!==B.타?` <span style="color:${타>B.타?'#1565C0':'#C62828'};font-size:12px;font-weight:800;">${타>B.타?'(+)':'(-)'}</span>`:''}</div><div class="pay-item-sub">${카}일 × ${rate.holiday.toLocaleString()}원/일</div></div>
+      <div class="pay-item-l"><div class="pay-item-label">타) 휴일 수당</div><div class="pay-item-sub">${카}일 × ${rate.holiday.toLocaleString()}원/일</div>${splitLine(타,B.타)}</div>
       <div class="pay-item-val">${타.toLocaleString()}원</div>
     </div>
   `;
