@@ -261,14 +261,6 @@ body.theme-dark select option{background:var(--bg3);color:var(--text);}
 .ot-list-item.sel-end{background:#EDE7F6;color:#6A1B9A;border-left:3px solid #7B1FA2;}
 
 
-.ot-preset{
-  background:var(--bg3);border:1.5px solid var(--border);border-radius:6px;
-  padding:5px 9px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;
-  color:var(--text2);cursor:pointer;transition:all .12s;white-space:nowrap;
-}
-.ot-preset:hover{background:#E8EAFF;border-color:#7986CB;color:#3949AB;}
-.ot-preset.active-start{background:#E3F2FD;border-color:#1976D2;color:#1565C0;}
-.ot-preset.active-end{background:#EDE7F6;border-color:#7B1FA2;color:#6A1B9A;}
 .modal #mOtStart:focus{border-color:#1976D2;background:#fff;}
 .modal #mOtEnd:focus{border-color:#7B1FA2;background:#fff;}
 
@@ -634,15 +626,40 @@ body.mode-desktop .bar-val{font-size:10px;}
 .save-ok{font-size:10px;color:var(--green);opacity:0;transition:opacity .3s;font-weight:600;}
 .save-ok.show{opacity:1;}
 
+/* ── 팀별 기본근무 수당 비교 (PC 전용) ── */
+.team-cmp{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
+body.mode-desktop .team-cmp{display:block;}
+.team-cmp-badge{font-size:10px;font-weight:700;color:#3949AB;background:#E8EAF6;border:1px solid #C5CAE9;border-radius:4px;padding:2px 8px;}
+.team-cmp-note{font-size:10px;color:var(--text3);margin-bottom:10px;line-height:1.6;}
+.tc-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);margin-bottom:6px;}
+.tc-row.me{border-color:#5C6BC0;background:var(--blue-bg);}
+.tc-team{flex:none;width:46px;font-size:12px;font-weight:800;color:var(--text2);}
+.tc-row.me .tc-team{color:#283593;}
+.tc-mid{flex:1;min-width:0;}
+.tc-bar{height:7px;border-radius:4px;background:var(--bg4);overflow:hidden;margin-bottom:4px;}
+.tc-bar>div{height:100%;border-radius:4px;background:linear-gradient(90deg,#5C6BC0,#3949AB);}
+.tc-row.me .tc-bar>div{background:linear-gradient(90deg,#EF5350,#C62828);}
+.tc-sub{font-size:9.5px;color:var(--text3);line-height:1.45;}
+.tc-right{flex:none;text-align:right;}
+.tc-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:var(--text);}
+.tc-row.me .tc-val{color:#C62828;}
+.tc-diff{font-size:9.5px;font-weight:700;margin-top:1px;}
+body.theme-dark .tc-row{background:var(--bg3);border-color:var(--border2);}
+body.theme-dark .tc-row.me{background:#1A2540;border-color:#5C6BC0;}
+body.theme-dark .tc-row.me .tc-team{color:#9FA8DA;}
+body.theme-dark .team-cmp-badge{background:#1A2540;border-color:#3949AB;color:#9FA8DA;}
+
 /* ── 설정 모달 ── */
-#settingsModal{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.45);display:none;align-items:flex-end;justify-content:center;padding:0;}
+/* 중앙 플로팅 (백업 모달과 동일 스타일) — 기존 바텀시트에서 변경 */
+#settingsModal{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;
+  padding:max(14px,env(safe-area-inset-top,14px)) 14px max(14px,env(safe-area-inset-bottom,14px));}
 #settingsModal.open{display:flex;}
-.settings-box{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:540px;box-shadow:0 -4px 40px rgba(0,0,0,0.22);border-top:4px solid #3949AB;overflow:hidden;max-height:92vh;overflow-y:auto;}
+.settings-box{background:#fff;border-radius:16px;width:100%;max-width:540px;box-shadow:0 8px 40px rgba(0,0,0,0.28);border-top:4px solid #3949AB;overflow:hidden;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .settings-header{padding:18px 18px 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1;padding-bottom:12px;border-bottom:1px solid var(--border);}
 .settings-title{font-size:15px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px;}
 .settings-close{background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1;padding:0 2px;}
 .settings-close:hover{color:var(--text);}
-.settings-body{padding:16px 18px 32px;}
+.settings-body{padding:16px 18px 22px;}
 .settings-sec{margin-bottom:20px;}
 .settings-sec-title{font-size:12px;font-weight:800;letter-spacing:1.2px;color:var(--text);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:5px;}
 .settings-sec-title::before{content:'';width:3px;height:11px;border-radius:2px;background:#3949AB;display:inline-block;}
@@ -915,7 +932,7 @@ body.theme-dark .rc-sub{color:var(--text3);}
 </div>
 
 <!-- ══ 관리자 모달 (입장 암호 변경) ══ -->
-<div id="adminModal">
+<div id="adminModal" onclick="if(event.target===this)closeAdminModal()">
   <div class="admin-box">
     <div class="admin-title">🛡️ 입장 암호 변경</div>
     <div class="admin-sub">현재 입장 암호 확인 후 새 암호로 변경합니다</div>
@@ -1034,6 +1051,7 @@ body.theme-dark .rc-sub{color:var(--text3);}
           <tbody id="settingsRateBody"></tbody>
         </table>
       </div>
+      <div id="rateYearWarn" style="display:none;margin-top:8px;padding:8px 11px;background:#FFF3E0;border:1px solid #FFB74D;border-radius:7px;font-size:11px;font-weight:700;color:#E65100;line-height:1.6;"></div>
       <div style="margin-top:8px;">
         <span style="font-size:10px;color:var(--text3);">단가 입력 후 저장하면 현재 사용 단가로 지정(연도 무관)</span>
       </div>
@@ -1127,6 +1145,9 @@ body.theme-dark .rc-sub{color:var(--text3);}
       <span id="sbStatusDot" style="width:9px;height:9px;border-radius:50%;background:#9E9E9E;flex-shrink:0;"></span>
       <span id="sbStatusText">연결 안 됨 (로컬 전용)</span>
     </div>
+    <!-- 💓 keepalive 상태 (무료 플랜 일시중지 방지) -->
+    <div id="sbPingInfo" style="display:none;font-size:11px;font-weight:600;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 11px;margin-bottom:8px;line-height:1.7;"></div>
+    <button id="sbPingBtn" onclick="sbPingNow()" style="width:100%;margin-bottom:10px;background:var(--bg3);color:var(--text2);border:1.5px solid var(--border2);border-radius:8px;padding:8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;">💓 지금 깨우기</button>
     <div style="margin-bottom:8px;">
       <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px;">Supabase Project URL</div>
       <input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co" autocomplete="off"
@@ -1295,6 +1316,16 @@ body.theme-dark .rc-sub{color:var(--text3);}
 <!-- ── 오른쪽: 통계 (PC에서만 표시) ── -->
 <div class="pc-col-right">
 
+<!-- ⑥ 팀별 기본근무 수당 비교 (PC 전용) -->
+<div class="team-cmp" id="teamCmp">
+  <div class="ct" style="margin-bottom:8px;">
+    <span class="ctl">팀별 기본근무 수당</span>
+    <span class="team-cmp-badge" id="teamCmpBadge"></span>
+  </div>
+  <div class="team-cmp-note">해당 월을 <b>순수 3조1교대 패턴</b>으로만 근무했을 때의 수당입니다. (초과근무·휴가·출장 등 입력값 제외)</div>
+  <div id="teamCmpBody"></div>
+</div>
+
 <!-- ⑦ 통계 패널 -->
 <div class="stat-panel" id="statPanel">
   <div class="ct" style="margin-bottom:12px;">
@@ -1324,41 +1355,6 @@ body.theme-dark .rc-sub{color:var(--text3);}
 </div><!-- /desktop-grid -->
 </div>
 
-<!-- ══ 패턴 적용 모달 ══ -->
-<div class="mbg" id="patternBg" onclick="if(event.target===this)closePatternModal()">
-<div class="modal" id="patternModal">
-  <div class="mtitle">
-    <span>📐 근무 패턴 일괄 적용</span>
-    <button class="mclose" onclick="closePatternModal()">✕</button>
-  </div>
-  <div class="info-box" style="margin-bottom:12px;">
-    지정한 날짜부터 <b>당-비-비</b> 순서로 한 달 치 근무 패턴을 자동 세팅합니다.<br>
-    이미 편집된 날짜도 <b>덮어쓰기</b>하므로 주의하세요.
-  </div>
-  <div class="msec" style="margin-top:0;padding-top:0;border-top:none;">
-    <div class="mstitle">패턴 시작일</div>
-    <div class="g2" style="margin-bottom:12px;">
-      <div class="of">
-        <label>시작 날짜 <span class="os">(이 날을 당번으로 세팅)</span></label>
-        <input type="number" id="pat2StartDay" value="1" min="1" max="31" style="text-align:center;">
-      </div>
-      <div class="of">
-        <label>패턴 <span class="os">(순서)</span></label>
-        <select id="pat2Order" style="font-size:13px;padding:8px 10px;">
-          <option value="dang-off-off">당→비→비 (당번 먼저)</option>
-          <option value="off-dang-off">비→당→비</option>
-          <option value="off-off-dang">비→비→당</option>
-        </select>
-      </div>
-    </div>
-    <div class="mstitle" style="margin-bottom:6px;">적용 범위</div>
-    <div class="trip-row" style="margin-bottom:10px;">
-      <label><input type="checkbox" id="pat2Overwrite" checked> 기존 편집 내용 덮어쓰기</label>
-    </div>
-  </div>
-  <button class="msave" onclick="applyPattern()">✓ 패턴 적용</button>
-</div>
-</div>
 
 <!-- ══ 날짜 편집 모달 ══ -->
 <div class="mbg" id="mbg" onclick="closeBg(event)">
@@ -1387,7 +1383,7 @@ body.theme-dark .rc-sub{color:var(--text3);}
           <div style="font-size:10px;color:#1565C0;font-weight:700;text-align:center;margin-bottom:5px;letter-spacing:.5px;">시작 시간</div>
           <input type="text" id="mOtStart" value="09:00" placeholder="09:00" maxlength="5"
             inputmode="numeric"
-            onfocus="this.select();otFocusTarget='start'"
+            onfocus="this.select()"
             oninput="fmtTimeInput(this);calcOtFromTime()"
             onblur="autoCompleteTime(this)"
             style="width:100%;background:#E3F2FD;border:2px solid #1976D2;border-radius:9px;color:#0D47A1;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;padding:10px 6px;outline:none;text-align:center;letter-spacing:2px;transition:border-color .15s;">
@@ -1397,7 +1393,7 @@ body.theme-dark .rc-sub{color:var(--text3);}
           <div style="font-size:10px;color:#6A1B9A;font-weight:700;text-align:center;margin-bottom:5px;letter-spacing:.5px;">종료 시간</div>
           <input type="text" id="mOtEnd" value="18:00" placeholder="33:00" maxlength="5"
             inputmode="numeric"
-            onfocus="this.select();otFocusTarget='end'"
+            onfocus="this.select()"
             oninput="fmtTimeInput(this);calcOtFromTime()"
             onblur="autoCompleteTime(this)"
             style="width:100%;background:#EDE7F6;border:2px solid #7B1FA2;border-radius:9px;color:#4A148C;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;padding:10px 6px;outline:none;text-align:center;letter-spacing:2px;transition:border-color .15s;">
@@ -1643,15 +1639,101 @@ function sbInit() {
     try {
       _sbGetOrCreate(url, key); // 싱글톤 생성
       _sbReady = true;
-      // pause 방지 ping (앱 로드 시마다 Supabase 활성 유지)
-      setTimeout(_sbPing, 1000);
     } catch(e) { _sbReady = false; }
+  }
+  // ── keepalive: pause 방지 ping ──
+  // url/key만 있으면 _sbReady와 무관하게 동작 (라이브러리 로드 실패 시에도 유지)
+  if (url && key) {
+    setTimeout(() => _sbPing(false), 1000);          // ① 앱 로드 시
+    // ② 탭을 다시 활성화할 때 (6시간 지났으면)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') _sbPing(false);
+    });
+    // ③ 탭을 오래 열어둔 경우 6시간마다
+    setInterval(() => _sbPing(false), SB_PING_MIN_INTERVAL_MS);
+  }
+  _sbRenderPingInfo();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  💓 KEEPALIVE — Supabase 무료 플랜 일시중지(pause) 방지
+//  무료 플랜은 "일정 기간 API 요청이 전혀 없으면" 프로젝트를 일시중지합니다.
+//  일시중지되면 API 요청으로는 깨울 수 없고 대시보드에서 수동 복구해야 하므로,
+//  중지되기 전에 주기적으로 요청을 보내야 합니다.
+//
+//  ⚠️ 앱 내부 ping만으로는 불충분합니다 — 앱을 열지 않으면 ping도 없습니다.
+//     확실한 방법은 외부 스케줄러입니다. 이 저장소의
+//     .github/workflows/supabase-keepalive.yml (GitHub Actions)이 그 역할을 하며,
+//     아래 인앱 ping은 보조 수단입니다. 설정법은 KEEPALIVE.md 참고.
+// ══════════════════════════════════════════════════════════════════
+const SB_PING_KEY = 'otp_sb_last_ping';
+const SB_PING_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000; // 같은 기기에서 최소 6시간 간격
+const SB_PAUSE_DAYS = 7;                            // 무료 플랜 비활성 기준(일)
+
+function _sbLastPing(){
+  const v = +(localStorage.getItem(SB_PING_KEY) || 0);
+  return v > 0 ? v : 0;
+}
+
+/**
+ * Supabase REST 엔드포인트에 가벼운 요청을 보내 '활동'을 남깁니다.
+ * supabase-js 대신 fetch를 직접 쓰는 이유: HTTP 응답이 돌아왔는지를 확인해야
+ * (401/404 같은 오류 응답도 서버 도달이므로 활동으로 집계됨)
+ * 오프라인으로 실패한 경우와 구분해 마지막 ping 시각을 정확히 기록할 수 있습니다.
+ * @param {boolean} force - true면 6시간 간격 제한을 무시
+ */
+async function _sbPing(force) {
+  const url = localStorage.getItem(SB_URL_KEY);
+  const key = localStorage.getItem(SB_KEY_KEY);
+  if (!url || !key) return false;
+  const last = _sbLastPing();
+  if (!force && last && Date.now() - last < SB_PING_MIN_INTERVAL_MS) return false;
+  try {
+    await fetch(`${url.replace(/\/+$/,'')}/rest/v1/otp_monthly?select=id&limit=1`, {
+      method: 'GET',
+      headers: { apikey: key, Authorization: 'Bearer ' + key, Accept: 'application/json' },
+      cache: 'no-store'
+    });
+    // 여기 도달 = HTTP 응답 수신 = 서버에 요청이 도달함
+    try { localStorage.setItem(SB_PING_KEY, String(Date.now())); } catch(e) {}
+    _sbRenderPingInfo();
+    return true;
+  } catch(e) {
+    console.warn('[SB] keepalive ping 실패(네트워크 확인):', e.message);
+    _sbRenderPingInfo();
+    return false;
   }
 }
 
-async function _sbPing() {
-  if (!_sbReady || !_sbClient) return;
-  try { await _sbClient.from('otp_monthly').select('id').limit(1); } catch(e) {}
+// 수동 ping 버튼
+async function sbPingNow(){
+  const btn = document.getElementById('sbPingBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '전송 중…'; }
+  const ok = await _sbPing(true);
+  if(btn){ btn.disabled = false; btn.textContent = '💓 지금 깨우기'; }
+  _sbShowMsg(ok ? '✅ keepalive 요청 전송됨' : '❌ 전송 실패 (URL·Key·네트워크 확인)', ok ? '#1B5E20' : '#C62828');
+}
+
+// 마지막 활동 시각 / 일시중지 예상일 표시
+function _sbRenderPingInfo(){
+  const box = document.getElementById('sbPingInfo');
+  if(!box) return;
+  const url = localStorage.getItem(SB_URL_KEY);
+  if(!url){ box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  const last = _sbLastPing();
+  if(!last){
+    box.innerHTML = '<b>💓 자동 깨우기</b><br>이 기기에서 보낸 기록이 아직 없습니다.';
+    return;
+  }
+  const d = new Date(last);
+  const daysSince = (Date.now() - last) / 86400000;
+  const left = Math.max(0, SB_PAUSE_DAYS - daysSince);
+  const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  const color = left <= 2 ? '#C62828' : left <= 4 ? '#E65100' : '#1B5E20';
+  box.innerHTML = `<b>💓 자동 깨우기</b><br>이 기기 마지막 요청: ${stamp}` +
+    `<br><span style="color:${color};font-weight:800;">일시중지까지 약 ${left.toFixed(1)}일 남음</span>` +
+    `<br><span style="color:var(--text3);font-weight:400;">GitHub Actions가 켜져 있으면 이 값과 무관하게 주기적으로 유지됩니다.</span>`;
 }
 
 function sbOpenSettings() {
@@ -1689,6 +1771,7 @@ async function sbConnect() {
     } else {
       _sbShowMsg('✅ 연결 성공!', '#1B5E20');
     }
+    _sbPing(true); // 연결 직후 keepalive 기록 시작
   } catch(e) { _sbShowMsg('❌ 연결 실패: ' + (e.message || e.code), '#C62828'); }
 }
 
@@ -1730,7 +1813,8 @@ function sbDisconnect() {
   _sbReady = false; _sbAutoOn = false;
   [SB_URL_KEY, SB_KEY_KEY].forEach(k => localStorage.removeItem(k));
   localStorage.setItem(SB_AUTO_KEY, 'false');
-  _sbUpdateUI(false); _sbApplyAutoUI();
+  try { localStorage.removeItem(SB_PING_KEY); } catch(e) {}
+  _sbUpdateUI(false); _sbApplyAutoUI(); _sbRenderPingInfo();
   ['sbUrl','sbKey'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   const guide = document.getElementById('sbSqlGuide');
   if (guide) guide.remove();
@@ -2039,7 +2123,6 @@ function openEntryAdminModal() {
   document.getElementById('adminPwInput').disabled = false;
   document.getElementById('newUserPw').value = '';
   document.getElementById('newUserPwConfirm').value = '';
-  document.getElementById('newAdminPw').value = '';
   document.getElementById('adminAuthSection').style.display = 'none';
   document.getElementById('adminErr').textContent = '';
   document.getElementById('adminOk').style.display = 'none';
@@ -2299,10 +2382,6 @@ function logout() {
   }
 }
 
-// 관리자 모달 (암호 변경 → 사용자 삭제로 대체, 하위 호환용 stub)
-function openAdminModal() { showUserList(); }
-function closeAdminModal() {}
-
 // ══ 초기화: 인증 체크 ══
 (async () => {
   await initEntryPw();
@@ -2401,17 +2480,6 @@ const TYPE_INFO={
   jg06:{label:'초과',   h:0,  color:'#004D40',      desc:'비번 주간초과 06:00~09:00'},
   ot:  {label:'초과',   h:0,  color:'#6A1B9A',      desc:'비번 초과근무 — 시작·종료 시간 입력'},
 };
-const ACC_DEFS=[
-  {id:'B', label:'B 주간',   sub:'09:00~18:00'},
-  {id:'C', label:'C 주간반가',sub:'09:00~14:00'},
-  {id:'D', label:'D 야간',   sub:'18:00~22:00'},
-  {id:'E', label:'E 야간',   sub:'22:00~06:00'},
-  {id:'F', label:'F 야간',   sub:'06:00~09:00'},
-  {id:'G1',label:'G1 당번',  sub:'09:00~18:00'},
-  {id:'G2',label:'G2 당번',  sub:'18:00~22:00'},
-  {id:'H', label:'H 당번',   sub:'22:00~06:00'},
-  {id:'I', label:'I 당번',   sub:'06:00~09:00'},
-];
 
 // ── 공휴일 데이터: 연도별 날짜 + 이름 통합 관리 ──
 // 🔴 버그 수정: HNAMES를 연도별로 분리하여 중복 표시 방지
@@ -2562,9 +2630,16 @@ function renderHolList(){
     list.innerHTML='<span style="font-size:10px;color:var(--text3);">지정된 공휴일 없음</span>';
     return;
   }
+  // 🔧 수정: 공휴일 명칭은 사용자 입력이므로 innerHTML로 넣으면 스크립트 주입이
+  //    가능했습니다(백업/클라우드로 다른 기기까지 전파). textContent로 변경.
   customHols.sort((a,b)=>a.dateStr.localeCompare(b.dateStr)).forEach(h=>{
     const tag=document.createElement('div');tag.className='hol-tag';
-    tag.innerHTML=`${h.dateStr} ${h.name}<button onclick="removeCustomHol('${h.dateStr}')" title="삭제">×</button>`;
+    const txt=document.createElement('span');
+    txt.textContent=`${h.dateStr} ${h.name}`;
+    const del=document.createElement('button');
+    del.title='삭제';del.textContent='×';
+    del.addEventListener('click',()=>removeCustomHol(h.dateStr));
+    tag.appendChild(txt);tag.appendChild(del);
     list.appendChild(tag);
   });
 }
@@ -2881,39 +2956,61 @@ function _renderRateTableTo(tbodyId, prefix, ratesObj){
     [`${prefix}ot_`,`${prefix}ni_`,`${prefix}ho_`].forEach(p=>attachRateInput(document.getElementById(p+g)));
   });
 }
+// 🔧 수정: 구 단가 테이블(rTBody)·저장버튼(sok)·접기(rBody/rArr) 요소는 UI에서
+//    제거됐는데 함수는 남아 있어, renderRateTable()이 10곳에서 호출되지만 전부
+//    조용히 아무 일도 하지 않았습니다. 이제 설정 모달의 단가 테이블을 갱신합니다.
+//    (가져오기·클라우드 다운로드 후 단가 표가 갱신되지 않던 문제도 함께 해결)
+//    호출처가 없던 saveRates()/resetRates()/toggleRate()는 삭제했습니다.
 function renderRateTable(){
-  _renderRateTableTo('rTBody','r',savedRates);
+  renderSettingsRateTable();
 }
 function renderSettingsRateTable(){
   _renderRateTableTo('settingsRateBody','sr',savedRates);
 }
+
+// 해당 연도 단가가 아직 고시되지 않았는지(전 계급 0원) 판단
+function _isRateYearEmpty(y){
+  const t = RATES_BY_YEAR[y];
+  if(!t) return true;
+  return GRADES.every(g => !(t[g] && (t[g].overtime || t[g].night || t[g].holiday)));
+}
+
+// 🔧 수정: 단가가 전부 0인 연도(미고시)를 '적용'하면 전 계급 단가가 0원이 되어
+//    수당이 전부 0으로 저장되는 사고가 있었습니다. 이제 차단하고 안내합니다.
 function renderSettingsRatePreview(){
   const y = +document.getElementById('settingsRateYear').value;
-  const data = RATES_BY_YEAR[y] || RATES_BY_YEAR[2026];
-  _renderRateTableTo('settingsRateBody','sr',data);
+  const warn = document.getElementById('rateYearWarn');
+  if(_isRateYearEmpty(y)){
+    _renderRateTableTo('settingsRateBody','sr',savedRates);
+    if(warn){
+      warn.style.display = 'block';
+      warn.textContent = `⚠️ ${y}년 단가는 아직 고시되지 않았습니다. 현재 사용 중인 단가를 그대로 표시합니다. 고시 후 직접 입력하여 저장하세요.`;
+    }
+    return;
+  }
+  if(warn){ warn.style.display = 'none'; warn.textContent = ''; }
+  _renderRateTableTo('settingsRateBody','sr',RATES_BY_YEAR[y]);
 }
-function saveRates(){
-  GRADES.forEach(g=>{
-    const ot=document.getElementById(`rot_${g}`);
-    const ni=document.getElementById(`rni_${g}`);
-    const ho=document.getElementById(`rho_${g}`);
-    if(ot&&ni&&ho) savedRates[g]={overtime:parseRate(ot.value),night:parseRate(ni.value),holiday:parseRate(ho.value)};
+
+// settingsRateYear 셀렉트에서 미고시 연도에 라벨 표시
+function _markEmptyRateYears(){
+  const sel = document.getElementById('settingsRateYear');
+  if(!sel) return;
+  [...sel.options].forEach(o => {
+    const y = +o.value;
+    if(_isRateYearEmpty(y) && !o.textContent.includes('미고시')) o.textContent = `${y}년 (미고시)`;
   });
-  const existYear=loadRateYear();
-  const payload={year:existYear||new Date().getFullYear(),rates:savedRates};
-  _safeStorageSet('otp_r5_'+(getCurrentUser()||''),JSON.stringify(payload));
-  const b=document.getElementById('sok');if(b){b.classList.add('show');setTimeout(()=>b.classList.remove('show'),2000);}
-  updateRateYearBadge();
 }
-function resetRates(){
-  if(!confirm('2026년 기본단가로 복원할까요?'))return;
-  savedRates=JSON.parse(JSON.stringify(DEF_RATES));renderRateTable();
-  try{localStorage.removeItem('otp_r5_'+(getCurrentUser()||''));}catch(e){}
-  updateRateYearBadge();
-}
-function toggleRate(){
-  document.getElementById('rBody')?.classList.toggle('show');
-  document.getElementById('rArr')?.classList.toggle('open');
+
+// 🔧 수정: 현재 연도가 셀렉트 옵션에 없으면 value가 ''가 되어
+//    saveSettingsRates()에서 year:0 으로 저장되고 배지에 "0년 단가"가 떴습니다.
+//    옵션에 없으면 가장 최근 연도를 선택합니다.
+function _selectRateYearOption(){
+  const sel = document.getElementById('settingsRateYear');
+  if(!sel) return;
+  const cur = String(new Date().getFullYear());
+  const opts = [...sel.options].map(o => o.value);
+  sel.value = opts.includes(cur) ? cur : opts[0];
 }
 function updateRateYearBadge(){
   const yr=loadRateYear();
@@ -2934,7 +3031,10 @@ function openSettingsModal(){
   document.getElementById('settingsGrade').value = document.getElementById('selG').value;
   renderSettingsRateTable();
   updateRateYearBadge();
-  document.getElementById('settingsRateYear').value = new Date().getFullYear();
+  _markEmptyRateYears();
+  _selectRateYearOption();
+  const _rw = document.getElementById('rateYearWarn');
+  if(_rw){ _rw.style.display='none'; _rw.textContent=''; }
   // 패턴 시작일 자동 세팅 (현재 월의 팀 첫 번째 당번일)
   const y=+document.getElementById('selY').value;
   const m=+document.getElementById('selM').value;
@@ -3032,18 +3132,32 @@ function applySettingsRatePreview(){
   renderSettingsRatePreview();
 }
 function saveSettingsRates(){
-  const rateYear = +document.getElementById('settingsRateYear').value;
+  // 🔧 수정: 셀렉트에 현재 연도 옵션이 없으면 0년으로 저장되던 문제 → 현재 연도로 보정
+  const rateYear = +document.getElementById('settingsRateYear').value || new Date().getFullYear();
+  const next = {};
   GRADES.forEach(g => {
-    savedRates[g] = {
+    next[g] = {
       overtime: parseRate(document.getElementById(`srot_${g}`).value),
       night:    parseRate(document.getElementById(`srni_${g}`).value),
       holiday:  parseRate(document.getElementById(`srho_${g}`).value)
     };
   });
+  // 🔧 수정: 전 계급 단가가 0이면 수당이 전부 0원으로 계산되므로 저장을 막습니다.
+  const allZero = GRADES.every(g => !(next[g].overtime || next[g].night || next[g].holiday));
+  if(allZero){
+    const warn = document.getElementById('rateYearWarn');
+    if(warn){
+      warn.style.display = 'block';
+      warn.textContent = '❌ 단가가 모두 0원입니다. 이대로 저장하면 수당이 전부 0원으로 계산되므로 저장하지 않았습니다.';
+    }
+    return;
+  }
+  GRADES.forEach(g => { savedRates[g] = next[g]; });
   renderRateTable();
   const payload = { year: rateYear, rates: savedRates };
   _safeStorageSet('otp_r5_'+(getCurrentUser()||''), JSON.stringify(payload));
   updateRateYearBadge();
+  renderTeamCompare(); // 단가가 바뀌면 팀별 비교 금액도 갱신
   const ok = document.getElementById('settingsRateOk');
   ok.classList.add('show'); setTimeout(() => ok.classList.remove('show'), 2200);
 }
@@ -3071,15 +3185,6 @@ function _updatePatStartDayByTeam(){
   document.getElementById('patStartDay').value = firstDuty;
 }
 document.getElementById('settingsTeam').addEventListener('change', _updatePatStartDayByTeam);
-function resetSettingsProfile(){
-  if (!confirm('저장된 프로필을 초기화할까요?')) return;
-  try { localStorage.removeItem(getProfileKey()); } catch(e) {}
-  document.getElementById('selT').value = '1';
-  document.getElementById('selG').value = '소방사';
-  document.getElementById('settingsTeam').value = '1';
-  document.getElementById('settingsGrade').value = '소방사';
-  renderCalendar();
-}
 
 // ══ 일별 데이터 (localStorage 월별 분리 저장) ══
 // 키 형식: otp_data_2026_04  → 해당 월 전체 데이터 객체
@@ -3153,9 +3258,6 @@ function renderCalendar(){
   const first=new Date(y,m-1,1).getDay();
   const days=new Date(y,m,0).getDate();
   const today=new Date();
-  // 통계 동시 계산 (중복 루프 제거)
-  let totalH=0,holKa=0,wdCount=0,nMin=0;
-
   // ── 인접일 중복 로드 방지: 월 전체 + 전월 마지막 2일 미리 로드 ──
   const _dayArr = [];
   for(let d=1; d<=days; d++) _dayArr[d] = getDay(y,m,d);
@@ -3189,13 +3291,6 @@ function renderCalendar(){
     const prevDate0=new Date(y,m-1,d-1);
     const prevJg06=_getDayFast(prevDate0.getFullYear(),prevDate0.getMonth()+1,prevDate0.getDate()).jg06||0;
     const nRes=calcN(effType,info.acc||{},info.trip,info.K||0,info.jg06||0,info.L||0,prevType,nextType,info.J||0,prev2Type,prevJg06,info.otStart||'');
-
-    // 통계 누적
-    const nw=isWknd(date)||hol;
-    if(!nw)wdCount++;
-    totalH+=typeHours(effType);
-    if(nw&&(effType==='dang'||effType==='jgun'))holKa++;
-    if(nRes.granted||(info.trip&&info.nManual))nMin+=CONFIG.JOINT_DUTY_MINUTES;
 
     const cell=document.createElement('div');
     let cls='cal-cell';
@@ -3243,6 +3338,53 @@ function renderCalendar(){
     g.appendChild(cell);
   }
   // updateStats 루프 제거됨 (renderCalendar에서 통합 처리)
+  renderTeamCompare();
+}
+
+// ══════════════════════════════════════
+//  👥 팀별 기본근무 수당 비교 (PC 전용)
+//  해당 월을 1·2·3팀 각각의 3조1교대 기본 패턴으로만 근무했을 때의 수당.
+//  초과근무·휴가·출장 등 편집값은 모두 제외한 순수 패턴 기준이라
+//  "이번 달은 어느 팀이 유리한가"를 바로 비교할 수 있습니다.
+// ══════════════════════════════════════
+function renderTeamCompare(){
+  const wrap = document.getElementById('teamCmpBody');
+  if(!wrap) return;
+  const y     = +document.getElementById('selY').value;
+  const m     = +document.getElementById('selM').value;
+  const grade = document.getElementById('selG').value;
+  const myTeam= +document.getElementById('selT').value;
+
+  const badge = document.getElementById('teamCmpBadge');
+  if(badge) badge.textContent = `${y}년 ${m}월 · ${grade}`;
+
+  const rows = [1,2,3].map(t => {
+    const r = _calcPay(y, m, grade, true, t);
+    return { team:t, total:r.total, 아:r.아, 차:r.차, 타:r.타,
+             dang:r.dangCnt, hol:r.holKa, ot:r.사 };
+  });
+  const max  = Math.max(...rows.map(r => r.total), 1);
+  const mine = rows.find(r => r.team === myTeam);
+
+  wrap.innerHTML = rows.map(r => {
+    const isMe = r.team === myTeam;
+    const pct  = Math.max(3, Math.round(r.total / max * 100));
+    const diff = mine ? r.total - mine.total : 0;
+    const diffHtml = isMe
+      ? '<div class="tc-diff" style="color:#C62828;">내 팀</div>'
+      : `<div class="tc-diff" style="color:${diff>0?'#1B5E20':diff<0?'#C62828':'var(--text3)'};">${diff>0?'+':''}${diff.toLocaleString()}</div>`;
+    return `<div class="tc-row${isMe?' me':''}" title="시간외 ${r.아.toLocaleString()}원 · 야간 ${r.차.toLocaleString()}원 · 휴일 ${r.타.toLocaleString()}원">
+      <div class="tc-team">${r.team}팀</div>
+      <div class="tc-mid">
+        <div class="tc-bar"><div style="width:${pct}%"></div></div>
+        <div class="tc-sub">당번 ${r.dang}일 · 휴일 ${r.hol}일 · 초과 ${r.ot.toFixed(1)}h</div>
+      </div>
+      <div class="tc-right">
+        <div class="tc-val">${r.total.toLocaleString()}</div>
+        ${diffHtml}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function resetMonth(){
@@ -3293,37 +3435,6 @@ function applyPatternFromSettings(){
   closeSettingsModal();
   renderCalendar();
   alert(`${y}년 ${m}월 패턴 적용 완료`);
-}
-function openPatternModal(){
-  const y=+document.getElementById('selY').value;
-  const m=+document.getElementById('selM').value;
-  const team=+document.getElementById('selT').value;
-  // 해당 월에서 팀의 첫 번째 당번일을 자동 계산
-  const days=new Date(y,m,0).getDate();
-  let firstDuty=1;
-  for(let d=1;d<=days;d++){
-    if(isBaseDuty(new Date(y,m-1,d),team)){firstDuty=d;break;}
-  }
-  document.getElementById('pat2StartDay').value=firstDuty;
-  document.getElementById('patternBg').classList.add('open');
-}
-function closePatternModal(){
-  document.getElementById('patternBg').classList.remove('open');
-}
-function applyPattern(){
-  const y=+document.getElementById('selY').value;
-  const m=+document.getElementById('selM').value;
-  const startDay=+document.getElementById('pat2StartDay').value;
-  const order=document.getElementById('pat2Order').value.split('-');
-  const overwrite=document.getElementById('pat2Overwrite').checked;
-  const days=new Date(y,m,0).getDate();
-
-  if(startDay<1||startDay>days){alert('시작 날짜가 올바르지 않습니다.');return;}
-  if(!confirm(`${y}년 ${m}월 ${startDay}일부터 패턴을 적용할까요?`))return;
-
-  _doApplyPattern(y, m, startDay, order, overwrite, false); // keepJ:false — 초기화
-  closePatternModal();
-  renderCalendar();
 }
 
 // ══ 모달 ══
@@ -3496,37 +3607,6 @@ function updateOtSec(){
 // ── 시간 → 분 변환 ─────────────────────────────────────────────────
 function _toMin(hhmm){const[h,m]=hhmm.split(':').map(Number);return h*60+(m||0);}
 function _r05(h){return Math.round(h*2)/2;}
-
-// ── 모바일 감지 ────────────────────────────────────────────────────
-function isMobileMode(){ return document.body.classList.contains('mode-mobile'); }
-
-// (모바일 리스트 피커 제거 — 직접 텍스트 입력으로 통일)
-
-// ── PC 프리셋 버튼 ────────────────────────────────────────────────
-let otFocusTarget = 'start';
-
-function setOtPreset(which, val){
-  const el = document.getElementById(which==='start'?'mOtStart':'mOtEnd');
-  if(!el) return;
-  el.value = val;
-  el.focus();
-  otFocusTarget = which;
-  calcOtFromTime();
-  updateOtPresetHighlight();
-}
-
-function updateOtPresetHighlight(){
-  const sEl=document.getElementById('mOtStart'), eEl=document.getElementById('mOtEnd');
-  if(!sEl||!eEl) return;
-  const sv=sEl.value, ev=eEl.value;
-  document.querySelectorAll('.ot-preset').forEach(btn=>{
-    btn.classList.remove('active-start','active-end');
-    const fn=btn.getAttribute('onclick')||'';
-    if(fn.includes("'start'")&&fn.includes(`'${sv}'`)) btn.classList.add('active-start');
-    if(fn.includes("'end'")  &&fn.includes(`'${ev}'`)) btn.classList.add('active-end');
-  });
-}
-
 
 function fmtTimeInput(el){
   let v=el.value.replace(/[^0-9]/g,'');
@@ -3856,15 +3936,6 @@ function _restoreOtTime(K,L,M){
   document.getElementById('mOtEnd').value=end;
 }
 
-// 초과근무 시간 최대값 클램프 (레거시 — hidden input으로 직접 호출 안됨, 안전 유지)
-function clampOt(id,max){
-  const el=document.getElementById(id);if(!el)return;
-  let v=parseFloat(el.value);
-  if(isNaN(v)||v<0){el.value=0;return;}
-  if(v>max)el.value=max;
-  el.value=Math.round(parseFloat(el.value)*2)/2;
-}
-
 function saveDay(){
   const K=Math.min(CONFIG.MAX_DAYTIME_OT_HOURS,Math.max(0,+document.getElementById('mK').value||0));
   const jg06=Math.min(CONFIG.MAX_DAWN_OT_HOURS,Math.max(0,+document.getElementById('mjg06').value||0));
@@ -3928,9 +3999,10 @@ function toggleDetail(){
 
 // ══ 수당 계산 공통 집계 함수 ══
 // useBase=true 이면 수정된 날짜도 기본 패턴값(자동 당번/비번)으로 계산
-function _calcPay(y, m, grade, useBase){
+// teamOverride: 지정하면 selT 대신 그 팀의 근무패턴으로 계산 (팀별 비교용)
+function _calcPay(y, m, grade, useBase, teamOverride){
   const rate=savedRates[grade]||DEF_RATES[grade];
-  const team=+document.getElementById('selT').value;
+  const team=(teamOverride!=null)?+teamOverride:+document.getElementById('selT').value;
   const days=new Date(y,m,0).getDate();
   const EMPTY_ACC={B:0,C:0,D:0,E:0,F:0,G1:0,G2:0,H:0,I:0};
 
@@ -3946,8 +4018,10 @@ function _calcPay(y, m, grade, useBase){
     const date=new Date(y,m-1,d);
     const isEdited=hasEdit(y,m,d);
     if(isEdited) editedDays++;
-    if(useBase && isEdited){
-      // 기본 패턴: 팀 기준 당번/비번, 초과근무 없음
+    if(useBase){
+      // 기본 패턴: 팀 기준 당번/비번, 초과근무·휴가·출장 없음
+      // (수정되지 않은 날은 getDay()도 같은 값을 돌려주므로 결과는 동일하고,
+      //  selT에 의존하지 않게 되어 teamOverride로 다른 팀 계산이 가능해집니다)
       const duty=isBaseDuty(date,team);
       return {type:duty?'dang':'off',K:0,jg06:0,L:0,J:0,trip:false,lunch:false,nManual:false,acc:EMPTY_ACC};
     }
@@ -3958,10 +4032,7 @@ function _calcPay(y, m, grade, useBase){
   function adjType(d,offset){
     const nd=new Date(y,m-1,d+offset);
     const ny=nd.getFullYear(),nm=nd.getMonth()+1,ndd=nd.getDate();
-    if(useBase && hasEdit(ny,nm,ndd)){
-      const duty=isBaseDuty(nd,team);
-      return duty?'dang':'off';
-    }
+    if(useBase) return isBaseDuty(nd,team)?'dang':'off';
     const adj=getDay(ny,nm,ndd);
     // 24시간 휴가(J=2+vac)는 off로 처리
     if(adj.type==='dang' && adj.J===2 && adj.jType==='vac') return 'off';
@@ -3988,9 +4059,13 @@ function _calcPay(y, m, grade, useBase){
     const prev=adjType(d,-1);
     const next=adjType(d,1);
     const prev2=adjType(d,-2);
-    const prevDateC=new Date(y,m-1,d-1);
-    const prevInfoC=getDay(prevDateC.getFullYear(),prevDateC.getMonth()+1,prevDateC.getDate());
-    const prevJg06C=prevInfoC.jg06||0;
+    // 기본근무 계산에서는 저장된 조기출근(jg06) 편집값을 참조하지 않습니다.
+    // (기존에는 base 계산인데도 실제 편집값을 읽어 공동근무 20분이 빠지는 경우가 있었습니다)
+    let prevJg06C=0;
+    if(!useBase){
+      const prevDateC=new Date(y,m-1,d-1);
+      prevJg06C=getDay(prevDateC.getFullYear(),prevDateC.getMonth()+1,prevDateC.getDate()).jg06||0;
+    }
     const nRes=calcN(effType,info.acc||EMPTY_ACC,info.trip,info.K||0,info.jg06||0,info.L||0,prev,next,info.J||0,prev2,prevJg06C,info.otStart||'');
     if(nRes.granted||(info.trip&&info.nManual))N_min+=CONFIG.JOINT_DUTY_MINUTES;
     if(info.acc){
@@ -4387,14 +4462,22 @@ function renderStats(){
 
 let _statExpanded = window.innerWidth >= 768;
 let _statExpandedManual = false;
+// 🔧 수정: 기존 조건은 "펼침 여부(_statExpanded)"와 "데스크탑 여부(nowDesktop)"를
+//    직접 비교해, 데스크탑에서 통계를 접은 뒤 창 크기를 조금만 바꾸면
+//    수동 설정이 매번 리셋되어 다시 펼쳐졌습니다.
+//    이제 '브레이크포인트 교차'만 감지하고, resize 폭주 방지를 위해 디바운스합니다.
+let _statWasDesktop = window.innerWidth >= 768;
+let _statResizeT = null;
 window.addEventListener('resize', ()=>{
-  // 수동 전환 후에도 모바일↔데스크탑 경계 교차 시 자동감지 재활성
-  const nowDesktop = window.innerWidth >= 768;
-  if(!_statExpandedManual || nowDesktop !== _statExpanded){
-    _statExpandedManual = false;
+  clearTimeout(_statResizeT);
+  _statResizeT = setTimeout(()=>{
+    const nowDesktop = window.innerWidth >= 768;
+    if(nowDesktop === _statWasDesktop) return; // 경계를 넘지 않았으면 그대로 유지
+    _statWasDesktop = nowDesktop;
+    _statExpandedManual = false;               // 경계 교차 시에만 자동감지 복귀
     _statExpanded = nowDesktop;
     renderStats();
-  }
+  }, 150);
 });
 function toggleStatDetail(){ _statExpandedManual=true; _statExpanded=!_statExpanded; renderMonthly(); }
 
@@ -4834,6 +4917,8 @@ function pinClear(mode){
   _updateDots(mode);
   document.getElementById(mode+'PinStatus').textContent = '';
   document.getElementById(mode+'PinStatus').className   = 'enc-pin-status';
+  // 🔧 수정: PIN을 전체 삭제했는데 '저장' 버튼이 활성 상태로 남아 있던 문제
+  if(mode==='export'){const b=document.getElementById('exportDlBtn');if(b){b.disabled=true;b.style.opacity='0.45';b.style.cursor='not-allowed';}}
 }
 
 // ══════════════════════════════════════
@@ -4856,7 +4941,7 @@ function switchBackupTab(tab){
     document.getElementById('bTab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active',t===tab);
     document.getElementById('bPane'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active',t===tab);
   });
-  if(tab === 'cloud') { _sbUpdateUI(_sbReady); _sbApplyAutoUI(); }
+  if(tab === 'cloud') { _sbUpdateUI(_sbReady); _sbApplyAutoUI(); _sbRenderPingInfo(); }
 }
 
 // ── 내보내기 ────────────────────────────────────────────────────
@@ -5241,6 +5326,24 @@ document.getElementById('cal').addEventListener('click', e => {
 // ── 파일 선택 / 드래그앤드롭 이벤트 연결 ────────────────────────
 document.getElementById('restoreFileInput').addEventListener('change', e=>{
   if(e.target.files[0]) _readBackupFile(e.target.files[0]);
+});
+
+// ── ESC 키로 열린 모달 닫기 (위에 있는 모달부터) ──────────────────
+// 🔧 추가: 입장 암호 변경 모달은 배경 클릭·ESC가 없어, 닫기 버그와 겹치면
+//    새로고침 외에 빠져나올 방법이 없었습니다.
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  const chain = [
+    ['restoreConfirmModal', 'show', closeRestoreConfirm],
+    ['adminModal',          'open', closeAdminModal],
+    ['mbg',                 'open', closeModal],
+    ['backupModal',         'open', closeBackupModal],
+    ['settingsModal',       'open', closeSettingsModal],
+  ];
+  for(const [id, cls, fn] of chain){
+    const el = document.getElementById(id);
+    if(el && el.classList.contains(cls)){ fn(); return; }
+  }
 });
 
 const _drop = document.getElementById('restoreDrop');
