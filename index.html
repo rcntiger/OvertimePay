@@ -1052,16 +1052,14 @@ body.theme-dark .rc-sub{color:var(--text3);}
     <!-- 계급별 단가 -->
     <div class="settings-sec">
       <div class="settings-sec-title">계급별 지급 단가 <span id="rateYearBadge" style="font-size:10px;font-weight:700;color:#1565C0;background:#E3F2FD;border:1px solid #90CAF9;border-radius:5px;padding:2px 7px;margin-left:6px;display:none;"></span></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-        <span style="font-size:11px;color:var(--text3);">연도 불러오기</span>
-        <select id="settingsRateYear" onchange="renderSettingsRatePreview()" style="font-size:12px;padding:5px 8px;width:auto;">
-          <option value="2027">2027년</option><option value="2026">2026년</option><option value="2025">2025년</option>
-          <option value="2024">2024년</option><option value="2023">2023년</option>
-        </select>
-        <button onclick="applySettingsRatePreview()" style="font-size:11px;padding:5px 10px;background:var(--blue-bg);color:var(--blue);border:1px solid #90CAF9;border-radius:6px;font-family:inherit;cursor:pointer;font-weight:700;">적용</button>
-        <button class="settings-save-btn" onclick="saveSettingsRates()" style="flex:none;padding:5px 12px;font-size:11px;">💾 단가 저장</button>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--text3);flex:none;">편집할 연도</span>
+        <select id="settingsRateYear" onchange="onSettingsRateYearChange()" style="font-size:12px;padding:5px 8px;width:auto;min-width:0;"></select>
+        <button onclick="copyPrevRateYear()" style="font-size:11px;padding:5px 9px;background:var(--bg3);color:var(--text2);border:1px solid var(--border2);border-radius:6px;font-family:inherit;cursor:pointer;font-weight:700;">📋 직전 연도 복사</button>
+        <button class="settings-save-btn" onclick="saveSettingsRates()" style="flex:none;padding:5px 12px;font-size:11px;">💾 저장</button>
         <span class="settings-ok" id="settingsRateOk">✓ 저장됨</span>
       </div>
+      <div id="rateYearHelp" style="font-size:10.5px;font-weight:700;margin-bottom:8px;line-height:1.6;"></div>
       <div class="calc-table-wrap">
         <table class="rate-table">
           <thead><tr><th>계급</th><th>시간외(원/h)</th><th>야간(원/h)</th><th>휴일(원/일)</th></tr></thead>
@@ -1069,8 +1067,9 @@ body.theme-dark .rc-sub{color:var(--text3);}
         </table>
       </div>
       <div id="rateYearWarn" style="display:none;margin-top:8px;padding:8px 11px;background:#FFF3E0;border:1px solid #FFB74D;border-radius:7px;font-size:11px;font-weight:700;color:#E65100;line-height:1.6;"></div>
-      <div style="margin-top:8px;">
-        <span style="font-size:10px;color:var(--text3);">단가 입력 후 저장하면 현재 사용 단가로 지정(연도 무관)</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <span style="font-size:10px;color:var(--text3);line-height:1.6;">계산할 때 그 달의 연도에 맞는 단가가 자동 적용됩니다.<br>새 해 단가가 고시되면 그 연도를 골라 입력하고 저장하세요.</span>
+        <button id="rateYearDelBtn" onclick="deleteRateYear()" style="font-size:10px;padding:4px 9px;background:var(--bg3);color:#C62828;border:1px solid #FFCDD2;border-radius:6px;font-family:inherit;cursor:pointer;font-weight:700;display:none;">🗑 이 연도 저장분 삭제</button>
       </div>
     </div>
   </div>
@@ -2057,7 +2056,7 @@ async function sbPullAll() {
       if (settings.stat_results) _safeStorageSet(getStatKey(),        JSON.stringify(settings.stat_results));
       if (settings.custom_hols)  { customHols = settings.custom_hols; _saveCustomHols(); }
     }
-    savedRates = loadRates(); renderRateTable(); initProfile();
+    renderRateTable(); initProfile();
     renderCalendar(); initStatYearSelect(); renderStats();
     _sbShowMsg(`✅ 다운로드 완료 (${(monthly||[]).length}개월)`, '#1B5E20');
     _sbHeaderBadge('ok');
@@ -3052,21 +3051,55 @@ function renderAccEntries(){
 }
 
 // ══ 단가 ══
-function loadRates(){
-  const parsed = _safeStorageGet('otp_r5_'+(getCurrentUser()||''));
-  if(parsed){
-    // 새 형식: { year, rates } / 구 형식: { 소방령: {...}, ... }
-    if(parsed.rates) return parsed.rates;
-    return parsed;
-  }
-  return JSON.parse(JSON.stringify(DEF_RATES));
+// ══════════════════════════════════════════════════════════════════
+//  단가는 연도별로 보관하고, 계산하는 달의 연도에 맞는 값을 자동 적용합니다.
+//  저장 형식  { v:2, years:{ "2026":{소방령:{overtime,night,holiday},…}, … } }
+//  구 형식({year,rates} 또는 계급맵)은 읽을 때 자동 변환합니다.
+// ══════════════════════════════════════════════════════════════════
+function _rateKey(){ return 'otp_r5_'+(getCurrentUser()||''); }
+
+function loadUserRateYears(){
+  const parsed = _safeStorageGet(_rateKey());
+  if(!parsed) return {};
+  if(parsed.v === 2 && parsed.years) return parsed.years;
+  const cur = new Date().getFullYear();
+  if(parsed.rates) return { [String(parsed.year || cur)]: parsed.rates };   // 구 {year,rates}
+  if(GRADES.some(g => parsed[g])) return { [String(cur)]: parsed };          // 더 구형 계급맵
+  return {};
 }
-function loadRateYear(){
-  const parsed = _safeStorageGet('otp_r5_'+(getCurrentUser()||''));
-  if(parsed && parsed.year) return parsed.year;
-  return null;
+function saveUserRateYears(years){
+  return _safeStorageSet(_rateKey(), JSON.stringify({ v:2, years }));
 }
-let savedRates=loadRates();
+function _isEmptyRateSet(t){
+  return !t || GRADES.every(g => !(t[g] && (t[g].overtime || t[g].night || t[g].holiday)));
+}
+// 사용자 저장 + 내장 테이블을 합쳐 '값이 있는' 연도 목록
+function availableRateYears(){
+  const u = Object.keys(loadUserRateYears()).map(Number);
+  const b = Object.keys(RATES_BY_YEAR).map(Number).filter(y => !_isEmptyRateSet(RATES_BY_YEAR[y]));
+  return [...new Set([...u, ...b])].sort((a,b2) => a - b2);
+}
+
+/**
+ * 해당 연도에 적용할 단가를 고릅니다.
+ * 사용자 저장분 → 내장 테이블 → 그 해 이전의 가장 최근 연도(없으면 가장 이른 연도) 순.
+ * 마지막 경우는 추정치이므로 estimated=true 로 표시합니다.
+ * @returns {{rates:object, year:number, source:'user'|'builtin'|'fallback', estimated:boolean}}
+ */
+function ratesForYear(y){
+  y = +y;
+  const user = loadUserRateYears();
+  if(user[y] && !_isEmptyRateSet(user[y])) return {rates:user[y], year:y, source:'user', estimated:false};
+  if(!_isEmptyRateSet(RATES_BY_YEAR[y]))   return {rates:RATES_BY_YEAR[y], year:y, source:'builtin', estimated:false};
+  const avail = availableRateYears();
+  if(!avail.length) return {rates:DEF_RATES, year:0, source:'fallback', estimated:true};
+  const before = avail.filter(a => a < y);
+  const pick = before.length ? before[before.length-1] : avail[0];
+  const rates = (user[pick] && !_isEmptyRateSet(user[pick])) ? user[pick] : RATES_BY_YEAR[pick];
+  return {rates: rates || DEF_RATES, year: pick, source:'fallback', estimated:true};
+}
+
+
 function fmtRate(v){return Number(v).toLocaleString('ko-KR');}
 function parseRate(s){return parseInt(String(s).replace(/,/g,''),10)||0;}
 function attachRateInput(el){
@@ -3102,74 +3135,112 @@ function renderRateTable(){
   renderSettingsRateTable();
 }
 function renderSettingsRateTable(){
-  _renderRateTableTo('settingsRateBody','sr',savedRates);
+  // 설정 모달에 선택된 연도의 단가를 표시 (모달이 닫혀 있으면 달력 연도 기준)
+  const sel = document.getElementById('settingsRateYear');
+  const y = (sel && sel.value) ? +sel.value : (+document.getElementById('selY').value || new Date().getFullYear());
+  _renderRateTableTo('settingsRateBody','sr', _ratesForEdit(y).rates);
 }
 
-// 해당 연도 단가가 아직 고시되지 않았는지(전 계급 0원) 판단
-function _isRateYearEmpty(y){
-  const t = RATES_BY_YEAR[y];
-  if(!t) return true;
-  return GRADES.every(g => !(t[g] && (t[g].overtime || t[g].night || t[g].holiday)));
+// 편집 대상 연도의 현재 값(사용자 저장분 → 내장 → 직전 연도 추정)
+function _ratesForEdit(y){
+  const user = loadUserRateYears();
+  if(user[y] && !_isEmptyRateSet(user[y])) return {rates:user[y], src:'user'};
+  if(!_isEmptyRateSet(RATES_BY_YEAR[y]))   return {rates:RATES_BY_YEAR[y], src:'builtin'};
+  return {rates:ratesForYear(y).rates, src:'none'};
 }
 
-// 🔧 수정: 단가가 전부 0인 연도(미고시)를 '적용'하면 전 계급 단가가 0원이 되어
-//    수당이 전부 0으로 저장되는 사고가 있었습니다. 이제 차단하고 안내합니다.
-function renderSettingsRatePreview(){
-  const y = +document.getElementById('settingsRateYear').value;
-  const warn = document.getElementById('rateYearWarn');
-  if(_isRateYearEmpty(y)){
-    _renderRateTableTo('settingsRateBody','sr',savedRates);
-    if(warn){
-      warn.style.display = 'block';
-      warn.textContent = `⚠️ ${y}년 단가는 아직 고시되지 않았습니다. 현재 사용 중인 단가를 그대로 표시합니다. 고시 후 직접 입력하여 저장하세요.`;
-    }
-    return;
-  }
-  if(warn){ warn.style.display = 'none'; warn.textContent = ''; }
-  _renderRateTableTo('settingsRateBody','sr',RATES_BY_YEAR[y]);
-}
-
-// settingsRateYear 셀렉트에서 미고시 연도에 라벨 표시
-function _markEmptyRateYears(){
+// 연도 셀렉트 구성 — 내장 연도 + 사용자가 저장한 연도 + 올해~내후년
+function buildRateYearSelect(keep){
   const sel = document.getElementById('settingsRateYear');
   if(!sel) return;
-  [...sel.options].forEach(o => {
-    const y = +o.value;
-    if(_isRateYearEmpty(y) && !o.textContent.includes('미고시')) o.textContent = `${y}년 (미고시)`;
+  const cur  = new Date().getFullYear();
+  const user = loadUserRateYears();
+  const all  = [...new Set([
+    ...Object.keys(RATES_BY_YEAR).map(Number),
+    ...Object.keys(user).map(Number),
+    cur, cur+1, cur+2
+  ])].sort((a,b) => b - a);
+  const prev = keep != null ? String(keep) : sel.value;
+  sel.innerHTML = '';
+  all.forEach(y => {
+    const o = document.createElement('option');
+    o.value = y;
+    const mine = user[y] && !_isEmptyRateSet(user[y]);
+    const has  = mine || !_isEmptyRateSet(RATES_BY_YEAR[y]);
+    o.textContent = `${y}년` + (mine ? ' ✏️ 직접입력' : has ? '' : ' (미등록)');
+    sel.appendChild(o);
   });
+  const opts = [...sel.options].map(o => o.value);
+  sel.value = opts.includes(prev) ? prev : String(cur);
 }
 
-// 🔧 수정: 현재 연도가 셀렉트 옵션에 없으면 value가 ''가 되어
-//    saveSettingsRates()에서 year:0 으로 저장되고 배지에 "0년 단가"가 떴습니다.
-//    옵션에 없으면 가장 최근 연도를 선택합니다.
-function _selectRateYearOption(){
-  const sel = document.getElementById('settingsRateYear');
-  if(!sel) return;
-  const cur = String(new Date().getFullYear());
-  const opts = [...sel.options].map(o => o.value);
-  sel.value = opts.includes(cur) ? cur : opts[0];
+function onSettingsRateYearChange(){
+  const y = +document.getElementById('settingsRateYear').value;
+  const {rates, src} = _ratesForEdit(y);
+  _renderRateTableTo('settingsRateBody','sr',rates);
+
+  const help = document.getElementById('rateYearHelp');
+  const del  = document.getElementById('rateYearDelBtn');
+  if(del) del.style.display = (src === 'user') ? 'inline-block' : 'none';
+  if(!help) return;
+  if(src === 'user'){
+    help.style.color = '#1B5E20';
+    help.textContent = `✏️ ${y}년은 직접 입력한 단가를 쓰고 있습니다.`;
+  } else if(src === 'builtin'){
+    help.style.color = 'var(--text3)';
+    help.textContent = `📘 ${y}년 기본 내장 단가입니다. 수정 후 저장하면 직접 입력값으로 바뀝니다.`;
+  } else {
+    const f = ratesForYear(y);
+    help.style.color = '#E65100';
+    help.textContent = `⚠️ ${y}년 단가가 아직 없습니다. 현재 표에는 ${f.year}년 값을 띄워 뒀습니다 — 고시된 값으로 고쳐 저장하세요.`;
+  }
 }
+
+// 직전 연도 값을 표에 불러오기 (새 해 단가 입력 시작점)
+function copyPrevRateYear(){
+  const y = +document.getElementById('settingsRateYear').value;
+  const avail = availableRateYears().filter(a => a < y);
+  if(!avail.length){ alert('불러올 이전 연도 단가가 없습니다.'); return; }
+  const py = avail[avail.length - 1];
+  _renderRateTableTo('settingsRateBody','sr', _ratesForEdit(py).rates);
+  const help = document.getElementById('rateYearHelp');
+  if(help){
+    help.style.color = '#1565C0';
+    help.textContent = `📋 ${py}년 값을 불러왔습니다. ${y}년 고시값으로 고친 뒤 저장하세요.`;
+  }
+}
+
+// 이 연도의 직접 입력값 삭제 → 내장 기본값으로 되돌림
+function deleteRateYear(){
+  const y = +document.getElementById('settingsRateYear').value;
+  const years = loadUserRateYears();
+  if(!years[y]) return;
+  if(!confirm(`${y}년 직접 입력 단가를 삭제할까요?\n삭제하면 기본 내장 단가로 되돌아갑니다.`)) return;
+  delete years[y];
+  saveUserRateYears(years);
+  buildRateYearSelect(y);
+  onSettingsRateYearChange();
+  updateRateYearBadge();
+  renderTeamCompare();
+}
+
 function updateRateYearBadge(){
-  const yr=loadRateYear();
   const badge=document.getElementById('rateYearBadge');
   if(!badge)return;
-  if(yr){
-    badge.textContent=`현재 적용: ${yr}년 단가`;
-    badge.style.display='inline-block';
-  } else {
-    badge.textContent='현재 적용: 기본 단가';
-    badge.style.display='inline-block';
-  }
+  const mine=Object.keys(loadUserRateYears())
+    .filter(y=>!_isEmptyRateSet(loadUserRateYears()[y]))
+    .sort((a,b)=>b-a);
+  badge.textContent = mine.length ? `직접 입력: ${mine.join(', ')}년` : '기본 내장 단가 사용';
+  badge.style.display='inline-block';
 }
 
 // ══ 설정 모달 ══
 function openSettingsModal(){
   document.getElementById('settingsTeam').value = document.getElementById('selT').value;
   document.getElementById('settingsGrade').value = document.getElementById('selG').value;
-  renderSettingsRateTable();
   updateRateYearBadge();
-  _markEmptyRateYears();
-  _selectRateYearOption();
+  buildRateYearSelect(+document.getElementById('selY').value || new Date().getFullYear());
+  onSettingsRateYearChange();
   const _rw = document.getElementById('rateYearWarn');
   if(_rw){ _rw.style.display='none'; _rw.textContent=''; }
   // 패턴 시작일 자동 세팅 (현재 월의 팀 첫 번째 당번일)
@@ -3265,9 +3336,6 @@ async function doChangeMyPw(){
 function closeSettingsModal(){
   document.getElementById('settingsModal').classList.remove('open');
 }
-function applySettingsRatePreview(){
-  renderSettingsRatePreview();
-}
 function saveSettingsRates(){
   // 🔧 수정: 셀렉트에 현재 연도 옵션이 없으면 0년으로 저장되던 문제 → 현재 연도로 보정
   const rateYear = +document.getElementById('settingsRateYear').value || new Date().getFullYear();
@@ -3286,13 +3354,16 @@ function saveSettingsRates(){
     if(warn){
       warn.style.display = 'block';
       warn.textContent = '❌ 단가가 모두 0원입니다. 이대로 저장하면 수당이 전부 0원으로 계산되므로 저장하지 않았습니다.';
+      setTimeout(()=>{ warn.style.display='none'; warn.textContent=''; }, 6000);
     }
     return;
   }
-  GRADES.forEach(g => { savedRates[g] = next[g]; });
-  renderRateTable();
-  const payload = { year: rateYear, rates: savedRates };
-  _safeStorageSet('otp_r5_'+(getCurrentUser()||''), JSON.stringify(payload));
+  // 선택한 연도의 단가로 저장 (다른 연도는 그대로 유지)
+  const years = loadUserRateYears();
+  years[rateYear] = next;
+  saveUserRateYears(years);
+  buildRateYearSelect(rateYear);
+  onSettingsRateYearChange();
   updateRateYearBadge();
   renderTeamCompare(); // 단가가 바뀌면 팀별 비교 금액도 갱신
   const ok = document.getElementById('settingsRateOk');
@@ -4138,7 +4209,8 @@ function toggleDetail(){
 // useBase=true 이면 수정된 날짜도 기본 패턴값(자동 당번/비번)으로 계산
 // teamOverride: 지정하면 selT 대신 그 팀의 근무패턴으로 계산 (팀별 비교용)
 function _calcPay(y, m, grade, useBase, teamOverride){
-  const rate=savedRates[grade]||DEF_RATES[grade];
+  const _rs=ratesForYear(y);
+  const rate=_rs.rates[grade]||DEF_RATES[grade];
   const team=(teamOverride!=null)?+teamOverride:+document.getElementById('selT').value;
   const days=new Date(y,m,0).getDate();
   const EMPTY_ACC={B:0,C:0,D:0,E:0,F:0,G1:0,G2:0,H:0,I:0};
@@ -4228,7 +4300,8 @@ function _calcPay(y, m, grade, useBase, teamOverride){
     total:아+차+타,
     A,K_sum,L_sum,M_sum,N_min,N_h,dH,
     J_sum,dangCnt:바,jgunCnt,ygunCnt:마,holKa:카,
-    sE,sH,lunchDeduct,editedDays
+    sE,sH,lunchDeduct,editedDays,
+    rateYear:_rs.year, rateSource:_rs.source, rateEstimated:_rs.estimated
   };
 }
 
@@ -4251,7 +4324,8 @@ function calculate(){
   const diff = R.total - B.total; // 수정으로 인한 증감액
 
   document.getElementById('resCard').style.display='block';
-  document.getElementById('resBadge').textContent=`${grade} · ${y}년 ${m}월`;
+  document.getElementById('resBadge').textContent =
+    `${grade} · ${y}년 ${m}월 · ${R.rateYear}년 단가${R.rateEstimated?'(추정)':''}`;
   document.querySelector('.calc-btn').textContent='🔄 다시 계산하기';
 
   // 비교 배지 생성
@@ -5460,7 +5534,6 @@ async function confirmDoImport(){
   }
 
   _cacheY = null;
-  savedRates = loadRates();
   renderRateTable();
   initProfile();
   renderCalendar();
