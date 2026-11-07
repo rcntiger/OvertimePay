@@ -407,16 +407,23 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#3949AB;
 .pay-item-label{font-size:14px;color:var(--text);font-weight:700;}
 .pay-item-sub{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;word-break:keep-all;line-height:1.4;}
 .pay-item-val{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:17px;color:#3949AB;white-space:nowrap;flex-shrink:0;margin-left:8px;}
-.pay-pfx-m{display:none;}
-/* 모바일: 아)/차)/타) 접두와 '수당' 접미를 숨기고 여백·글자를 줄여 한 눈에 들어오게 */
-body.mode-mobile .pay-summary{gap:4px;}
-body.mode-mobile .pay-item{padding:7px 11px;border-radius:7px;}
-body.mode-mobile .pay-item-label{font-size:13px;}
-body.mode-mobile .pay-item-sub{font-size:10px;line-height:1.35;}
-body.mode-mobile .pay-item-val{font-size:15px;margin-left:6px;}
-body.mode-mobile .pay-pfx,
-body.mode-mobile .pay-sfx{display:none;}
-body.mode-mobile .pay-pfx-m{display:inline;}
+/* 모바일: 시간외·야간·휴일 금액을 한 줄로 합쳐 표시 (PC는 기존 3행 카드 유지) */
+.pay-oneline{display:none;}
+body.mode-mobile .pay-item{display:none;}
+body.mode-mobile .pay-oneline{display:flex;align-items:stretch;background:#fff;border:1px solid #E8EAF6;border-radius:8px;padding:9px 4px;}
+.po-seg{flex:1;min-width:0;display:flex;align-items:baseline;justify-content:center;gap:4px;padding:0 3px;}
+.po-seg + .po-seg{border-left:1px solid #E8EAF6;}
+.po-lbl{font-size:10.5px;font-weight:700;color:var(--text3);flex:none;}
+.po-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:#3949AB;white-space:nowrap;}
+@media (max-width:365px){
+  body.mode-mobile .pay-oneline{padding:8px 2px;}
+  .po-seg{gap:3px;padding:0 1px;}
+  .po-lbl{font-size:9.5px;}
+  .po-val{font-size:12.5px;}
+}
+body.theme-dark .pay-oneline{background:var(--bg3);border-color:var(--border2);}
+body.theme-dark .po-seg + .po-seg{border-left-color:var(--border2);}
+body.theme-dark .po-val{color:#90CAF9;}
 .total-box{background:linear-gradient(135deg,#1B5E20,#2E7D32 55%,#388E3C);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;box-shadow:0 3px 12px rgba(27,94,32,0.3);}
 .total-box .tl{font-size:15px;font-weight:700;color:rgba(255,255,255,0.85);}
 .total-box .tv{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:900;color:#fff;}
@@ -1106,7 +1113,7 @@ body.theme-dark .rc-sub{color:var(--text3);}
       </div>
       <div class="backup-scope-item">
         <input type="checkbox" id="bck_stats" checked>
-        <label for="bck_stats">수당 통계</label>
+        <label for="bck_stats">통계</label>
       </div>
       <div class="backup-scope-item">
         <input type="checkbox" id="bck_rates" checked>
@@ -4256,21 +4263,21 @@ function calculate(){
   // 기본근무분 / 추가근무분 분해 — 항목별로 얼마가 더 붙었는지 바로 보이게
   const d아 = 아 - B.아, d차 = 차 - B.차, d타 = 타 - B.타;
   const fmtD = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toLocaleString();
-  const extraTitle = diff > 0 ? '➕ 추가 근무분 수당' : diff < 0 ? '➖ 기본 대비 감소' : '기본과 동일';
+  const extraTitle = diff > 0 ? '➕ 추가 근무분' : diff < 0 ? '➖ 기본 대비 감소' : '기본과 동일';
   // 각 수당 항목 아래에 "기본 N + 추가 M" 한 줄
   const splitLine = (actual, base) => (hasEdits && actual !== base)
-    ? `<div class="pay-item-sub" style="color:${actual>base?'#1565C0':'#C62828'};font-weight:700;">기본 ${base.toLocaleString()} <span class="pay-sfx">${actual>base?'+ 추가 ':'− 감소 '}</span><span class="pay-pfx-m">${actual>base?'+':'−'}</span>${Math.abs(actual-base).toLocaleString()}</div>`
+    ? `<div class="pay-item-sub" style="color:${actual>base?'#1565C0':'#C62828'};font-weight:700;">기본 ${base.toLocaleString()} ${actual>base?'+ 추가':'− 감소'} ${Math.abs(actual-base).toLocaleString()}</div>`
     : '';
 
   const compareHtml = hasEdits ? `
     <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;">
       <div style="flex:1;min-width:130px;background:#F0F1FF;border:1px solid #C5CAE9;border-radius:9px;padding:10px 13px;">
-        <div style="font-size:9px;font-weight:800;color:#3949AB;letter-spacing:0.8px;margin-bottom:4px;">📋 기본 근무 수당</div>
+        <div style="font-size:9px;font-weight:800;color:#3949AB;letter-spacing:0.8px;margin-bottom:4px;">📋 기본 근무</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;color:#3949AB;">${B.total.toLocaleString()}<span style="font-size:10px;font-weight:400;margin-left:2px;">원</span></div>
         <div style="font-size:9px;color:#5C6BC0;margin-top:3px;">근무 일정 수정 전</div>
       </div>
       <div style="flex:1;min-width:130px;background:linear-gradient(135deg,#E8F5E9,#F1F8E9);border:1px solid #A5D6A7;border-radius:9px;padding:10px 13px;">
-        <div style="font-size:9px;font-weight:800;color:#1B5E20;letter-spacing:0.8px;margin-bottom:4px;">✏️ 초과 반영 수당</div>
+        <div style="font-size:9px;font-weight:800;color:#1B5E20;letter-spacing:0.8px;margin-bottom:4px;">✏️ 초과 반영</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;color:#1B5E20;">${total.toLocaleString()}<span style="font-size:10px;font-weight:400;margin-left:2px;">원</span></div>
         <div style="font-size:9px;color:#388E3C;margin-top:3px;">${R.editedDays}일 수정 반영</div>
       </div>
@@ -4289,16 +4296,21 @@ function calculate(){
   document.getElementById('paySummary').innerHTML=`
     ${compareHtml}
     <div class="pay-item">
-      <div class="pay-item-l"><div class="pay-item-label"><span class="pay-pfx">아) </span>시간외<span class="pay-sfx"> 수당</span></div><div class="pay-item-sub">${사.toFixed(2)}h × ${rate.overtime.toLocaleString()}원/h</div>${splitLine(아,B.아)}</div>
+      <div class="pay-item-l"><div class="pay-item-label">아) 시간외</div><div class="pay-item-sub">${사.toFixed(2)}h × ${rate.overtime.toLocaleString()}원/h</div>${splitLine(아,B.아)}</div>
       <div class="pay-item-val">${아.toLocaleString()}원</div>
     </div>
     <div class="pay-item">
-      <div class="pay-item-l"><div class="pay-item-label"><span class="pay-pfx">차) </span>야간<span class="pay-sfx"> 수당</span></div><div class="pay-item-sub">${자.toFixed(2)}h × ${rate.night.toLocaleString()}원/h</div>${splitLine(차,B.차)}</div>
+      <div class="pay-item-l"><div class="pay-item-label">차) 야간</div><div class="pay-item-sub">${자.toFixed(2)}h × ${rate.night.toLocaleString()}원/h</div>${splitLine(차,B.차)}</div>
       <div class="pay-item-val">${차.toLocaleString()}원</div>
     </div>
     <div class="pay-item">
-      <div class="pay-item-l"><div class="pay-item-label"><span class="pay-pfx">타) </span>휴일<span class="pay-sfx"> 수당</span></div><div class="pay-item-sub">${카}일 × ${rate.holiday.toLocaleString()}원/일</div>${splitLine(타,B.타)}</div>
+      <div class="pay-item-l"><div class="pay-item-label">타) 휴일</div><div class="pay-item-sub">${카}일 × ${rate.holiday.toLocaleString()}원/일</div>${splitLine(타,B.타)}</div>
       <div class="pay-item-val">${타.toLocaleString()}원</div>
+    </div>
+    <div class="pay-oneline" title="시간외 ${아.toLocaleString()}원 · 야간 ${차.toLocaleString()}원 · 휴일 ${타.toLocaleString()}원">
+      <div class="po-seg"><span class="po-lbl">시간외</span><span class="po-val">${(아/10000).toFixed(1)}</span></div>
+      <div class="po-seg"><span class="po-lbl">야간</span><span class="po-val">${(차/10000).toFixed(1)}</span></div>
+      <div class="po-seg"><span class="po-lbl">휴일</span><span class="po-val">${(타/10000).toFixed(1)}</span></div>
     </div>
   `;
   document.getElementById('totalVal').textContent=total.toLocaleString()+' 원';
@@ -4320,10 +4332,10 @@ function calculate(){
     {var:'카', label:'휴일 출근일수',         formula:'휴일(토/일/공휴일) 당번+주간근무', result:`${카}일`,    hi:false},
     {var:'사', label:'시간외 근무시간',      formula:`가(${가}) - (다(${다.toFixed(2)}) + 카(${카})×8)`, result:`${사.toFixed(2)}h`, hi:true},
     {var:'자', label:'야간 근무시간',        formula:`마(${마})×8 + 바(${바})×8 + L(${L_sum}) - (E+H)/60`,         result:`${자.toFixed(2)}h`, hi:true},
-    {section:true, label:'수당 계산'},
-    {var:'아', label:'시간외 수당',          formula:`사(${사.toFixed(2)}h) × ${rate.overtime.toLocaleString()}원/h`, result:`${아.toLocaleString()}원`, hi:true},
-    {var:'차', label:'야간 수당',            formula:`자(${자.toFixed(2)}h) × ${rate.night.toLocaleString()}원/h`,   result:`${차.toLocaleString()}원`, hi:true},
-    {var:'타', label:'휴일 수당',            formula:`카(${카}일) × ${rate.holiday.toLocaleString()}원/일`,          result:`${타.toLocaleString()}원`, hi:true},
+    {section:true, label:'계산'},
+    {var:'아', label:'시간외',          formula:`사(${사.toFixed(2)}h) × ${rate.overtime.toLocaleString()}원/h`, result:`${아.toLocaleString()}원`, hi:true},
+    {var:'차', label:'야간',            formula:`자(${자.toFixed(2)}h) × ${rate.night.toLocaleString()}원/h`,   result:`${차.toLocaleString()}원`, hi:true},
+    {var:'타', label:'휴일',            formula:`카(${카}일) × ${rate.holiday.toLocaleString()}원/일`,          result:`${타.toLocaleString()}원`, hi:true},
   ];
 
   const tbl=document.getElementById('calcTable');
@@ -4824,7 +4836,7 @@ function _buildYearExtraBox(Y){
   return `
   <div style="background:${bg};border:1px solid ${bd};border-radius:10px;padding:11px 13px;margin-top:8px;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <span style="font-size:11px;font-weight:800;color:${c};">${ex>=0?'➕ 추가 근무분 수당':'➖ 기본 대비 감소'}</span>
+      <span style="font-size:11px;font-weight:800;color:${c};">${ex>=0?'➕ 추가 근무분':'➖ 기본 대비 감소'}</span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:900;color:${c};">${f(ex)}원</span>
     </div>
     <div style="font-size:9.5px;font-weight:700;color:${c};opacity:.85;margin-top:5px;font-family:'JetBrains Mono',monospace;">
@@ -5304,7 +5316,7 @@ function _analyzeImportData(data){
   }
   if(data.stats){
     const exists = !!_safeStorageGet(getStatKey());
-    items.push({ label:`수당 통계 (${Object.keys(data.stats).length}개월)`, badge: exists?'덮어씀':'신규', warn: exists });
+    items.push({ label:`통계 (${Object.keys(data.stats).length}개월)`, badge: exists?'덮어씀':'신규', warn: exists });
   }
   if(data.rates){
     const exists = !!_safeStorageGet('otp_r5_'+(getCurrentUser()||''));
