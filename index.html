@@ -2410,8 +2410,11 @@ async function tryUnlock() {
     err.textContent = '';
     // 데이터 캐시 초기화 (사용자 전환 시 이전 캐시 제거)
     _cacheY = null;
-    renderCalendar();
+    // initProfile()이 selT·selG(팀·계급)를 먼저 복원해야 합니다.
+    // 순서가 반대면 달력·팀비교가 기본값(1팀/소방사)으로 한 번 그려지고,
+    // 월을 다시 고르기 전까지 그대로 남습니다.
     initProfile();
+    renderCalendar();
     initStatYearSelect();
     renderStats();
   } else {
@@ -2447,8 +2450,8 @@ async function tryRegister() {
   document.getElementById('lockOverlay').style.display = 'none';
   _setAuthUI(true);
   _cacheY = null;
+  initProfile();   // 팀·계급 복원 후 그려야 기본값으로 한 번 그려지지 않습니다
   renderCalendar();
-  initProfile();
   initStatYearSelect();
   renderStats();
 }
@@ -2494,8 +2497,8 @@ async function doMigrate() {
   document.getElementById('lockOverlay').style.display = 'none';
   _setAuthUI(true);
   _cacheY = null;
+  initProfile();   // 팀·계급 복원 후 그려야 기본값으로 한 번 그려지지 않습니다
   renderCalendar();
-  initProfile();
   initStatYearSelect();
   renderStats();
 }
