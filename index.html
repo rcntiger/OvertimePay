@@ -3550,6 +3550,11 @@ function renderCalendar(){
   }
   // updateStats 루프 제거됨 (renderCalendar에서 통합 처리)
   renderTeamCompare();
+  // 결과 카드가 떠 있는 동안에는 금액을 항상 최신으로 유지합니다.
+  // (이게 없으면 날짜를 고쳐도 계산 전 금액이 그대로 남아 틀린 값을 맞는 값으로 착각하게 됩니다)
+  // calculate()는 renderCalendar()를 호출하지 않으므로 재귀 걱정은 없습니다.
+  const _rc = document.getElementById('resCard');
+  if(_rc && _rc.style.display === 'block') calculate();
 }
 
 // ══════════════════════════════════════
@@ -4979,6 +4984,11 @@ for(let i=1;i<=12;i++){
 ['selY','selM','selT'].forEach(id=>{
   document.getElementById(id).addEventListener('change',()=>{
     _cacheY=null;
+    // 달이 바뀌면 이전 달 결과를 먼저 내린다 —
+    // 그래야 renderCalendar()의 자동 갱신이 지난달 카드를 되살리지 않습니다.
+    document.getElementById('resCard').style.display='none';
+    document.getElementById('saveBar').style.display='none';
+    window._lastCalc=null;
     renderCalendar();
     const y=+document.getElementById('selY').value;
     // 자동 모드: 달력 연도 변경 시 통계 연도 동기화
@@ -5007,10 +5017,7 @@ for(let i=1;i<=12;i++){
       calculate();
       document.querySelector('.calc-btn').textContent='🔄 다시 계산하기';
     } else {
-      // 저장 데이터 없으면 결과 초기화
-      document.getElementById('resCard').style.display='none';
-      document.getElementById('saveBar').style.display='none';
-      window._lastCalc=null;
+      // 저장 데이터가 없으면 결과는 내려둔 채로 (위에서 이미 정리됨)
       document.querySelector('.calc-btn').textContent='🧮 계산하기';
     }
   });
